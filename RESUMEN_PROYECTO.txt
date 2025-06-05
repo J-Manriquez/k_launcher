@@ -12,54 +12,71 @@ K Launcher es una aplicación Android launcher personalizada desarrollada en Flu
    - Verificación de permisos especiales (overlay, usage stats, write settings)
    - Interfaz de usuario para gestión de permisos
 
-2. **Pantalla Principal del Launcher**
+2. **Pantalla Principal del Launcher (REESTRUCTURADA)**
    - Estado: COMPLETADO
-   - Grid de aplicaciones instaladas con paginación
-   - Búsqueda de aplicaciones en tiempo real
-   - Dock inferior para aplicaciones favoritas
-   - Menú de opciones con acceso a configuraciones
+   - Nueva estructura separando widgets de aplicaciones
+   - Grid personalizable para pantalla principal (widgets/apps favoritas)
+   - Cajón de aplicaciones que se abre deslizando hacia arriba
+   - Animaciones suaves para transiciones
+   - Configuración de grid desde pantalla de configuraciones
 
-3. **Servicio de Wallpaper**
+3. **Cajón de Aplicaciones**
+   - Estado: COMPLETADO
+   - Se abre deslizando hacia arriba desde la pantalla principal
+   - Grid personalizable (filas y columnas configurables)
+   - Búsqueda de aplicaciones en tiempo real
+   - Paginación automática según configuración de grid
+   - Animaciones de apertura/cierre
+
+4. **Pantalla de Configuraciones**
+   - Estado: COMPLETADO
+   - Configuración de grid del cajón de aplicaciones (3-6 columnas, 4-8 filas)
+   - Configuración de grid de pantalla principal (2-5 columnas, 3-6 filas)
+   - Configuraciones de apariencia (nombres, animaciones, notificaciones)
+   - Persistencia de configuraciones con SharedPreferences
+
+5. **Servicio de Wallpaper**
    - Estado: COMPLETADO
    - Cambio de fondo de pantalla desde galería
    - Fondos de pantalla por defecto
    - Persistencia de configuración de wallpaper
    - Interfaz de selección de fondos
 
-4. **Gestión de Aplicaciones**
+6. **Gestión de Aplicaciones**
    - Estado: COMPLETADO
    - Listado de aplicaciones instaladas
    - Lanzamiento de aplicaciones
    - Sistema de favoritos
    - Aplicaciones recientes
+   - Opciones contextuales (favoritos, información, añadir a pantalla principal)
 
 ### POR IMPLEMENTAR ⏳
-5. **Configuración como Launcher por Defecto**
+7. **Configuración como Launcher por Defecto**
    - Estado: PARCIAL (estructura creada, falta implementación nativa)
    - Intent filters configurados en AndroidManifest
    - Método nativo preparado
 
-6. **Bola Flotante con Gestos**
+8. **Sistema de Widgets Personalizados**
+   - Estado: PENDIENTE
+   - Widgets de reloj, clima, calendario
+   - Widgets de aplicaciones de terceros
+   - Posicionamiento libre en pantalla principal
+   - Redimensionamiento de widgets
+
+9. **Bola Flotante con Gestos**
    - Estado: PENDIENTE
    - Servicio de overlay
    - Gestos para navegación (inicio, atrás, recientes)
-   - Abrir abrir nueva barra de notificaciones
+   - Abrir nueva barra de notificaciones
    - Animaciones y feedback visual
 
-7. **Nueva Barra de Notificaciones Personalizada**
+10. **Nueva Barra de Notificaciones Personalizada**
    - Estado: PENDIENTE
    - Control de brillo
    - Control de volumen
    - Mostrar notificaciones del sistema
    - Atajos a configuraciones
    - Atajos a aplicaciones
-   - Abrir apicaciones
-
-8. **Sistema de Widgets**
-   - Estado: PENDIENTE
-   - Gestión de widgets de terceros
-   - Posicionamiento en pantalla principal
-   - Redimensionamiento de widgets
 
 ## SCRIPTS CREADOS Y DESCRIPCIÓN
 
@@ -102,10 +119,11 @@ K Launcher es una aplicación Android launcher personalizada desarrollada en Flu
 - launchApp(): Lanzar aplicación
 - Gestión de favoritos
 
-### 6. providers/settings_provider.dart
+### 6. providers/settings_provider.dart (ACTUALIZADO)
 **Descripción**: Configuraciones de la aplicación
 **Funciones**:
 - Gestión de preferencias de usuario
+- Configuración de grids (cajón y pantalla principal)
 - Persistencia de configuraciones
 - Notificación de cambios
 
@@ -116,24 +134,47 @@ K Launcher es una aplicación Android launcher personalizada desarrollada en Flu
 - Conversión desde/hacia JSON
 - Integración con device_apps
 
-### 8. screens/home_screen.dart
+### 8. screens/home_screen.dart (REESTRUCTURADO)
 **Descripción**: Pantalla principal del launcher
 **Funciones**:
-- Interfaz principal de usuario
-- Gestión de búsqueda
-- Navegación entre páginas
+- Nueva interfaz centrada en widgets
+- Detección de gestos para abrir cajón
+- Gestión de animaciones
 - Menús contextuales
 
-### 9. widgets/ (múltiples archivos)
+### 9. screens/settings_screen.dart (NUEVO)
+**Descripción**: Pantalla de configuraciones
+**Funciones**:
+- Configuración de grids personalizables
+- Configuraciones de apariencia
+- Interfaz intuitiva con sliders
+
+### 10. widgets/app_drawer.dart (NUEVO)
+**Descripción**: Cajón de aplicaciones deslizable
+**Funciones**:
+- Grid personalizable de aplicaciones
+- Búsqueda integrada
+- Paginación automática
+- Animaciones de apertura/cierre
+
+### 11. widgets/home_grid.dart (NUEVO)
+**Descripción**: Grid de la pantalla principal
+**Funciones**:
+- Mostrar aplicaciones favoritas y recientes
+- Espacios para futuros widgets
+- Grid personalizable
+- Opciones contextuales
+
+### 12. widgets/ (actualizados)
 **Descripción**: Componentes reutilizables de UI
 **Funciones**:
-- AppGrid: Grid de aplicaciones
+- AppGrid: Grid de aplicaciones con configuración personalizable
 - AppIcon: Icono de aplicación individual
 - CustomSearchBar: Barra de búsqueda
 - Dock: Dock inferior
 - WallpaperSelector: Selector de fondos
 
-### 10. android/app/src/main/kotlin/.../MainActivity.kt
+### 13. android/app/src/main/kotlin/.../MainActivity.kt
 **Descripción**: Código nativo Android para funcionalidades especiales
 **Funciones**:
 - Gestión de permisos especiales
@@ -148,50 +189,82 @@ K Launcher es una aplicación Android launcher personalizada desarrollada en Flu
 3. **Memoria**: Las imágenes de iconos y wallpapers deben gestionarse cuidadosamente
 4. **Compatibilidad**: Diferentes versiones de Android pueden requerir enfoques distintos
 5. **Threading**: Operaciones pesadas deben ejecutarse en hilos separados
+6. **Configuraciones Dinámicas**: Los grids se redimensionan automáticamente según configuración
 
 ### UX/UI
 1. **Accesibilidad**: Considerar usuarios con discapacidades
-2. **Personalización**: Permitir configuración de grid, colores, animaciones
-3. **Feedback Visual**: Animaciones y transiciones suaves
-4. **Gestos Intuitivos**: Gestos familiares para los usuarios de Android
+2. **Personalización**: Grid completamente personalizable con configuraciones persistentes
+3. **Feedback Visual**: Animaciones y transiciones suaves implementadas
+4. **Gestos Intuitivos**: Deslizamiento hacia arriba para abrir cajón de aplicaciones
+5. **Navegación Fluida**: Separación clara entre widgets y aplicaciones
 
 ### Seguridad
 1. **Permisos Mínimos**: Solicitar solo permisos necesarios
 2. **Validación**: Validar datos de aplicaciones de terceros
 3. **Privacidad**: No recopilar datos innecesarios del usuario
 
+## CAMBIOS RECIENTES (REESTRUCTURACIÓN PRINCIPAL)
+
+### Cambios Arquitectónicos
+1. **Separación de Responsabilidades**:
+   - Pantalla principal: Widgets y aplicaciones favoritas/recientes
+   - Cajón de aplicaciones: Lista completa de aplicaciones instaladas
+   - Configuraciones: Gestión centralizada de preferencias
+
+2. **Nuevos Componentes**:
+   - `AppDrawer`: Cajón deslizable con animaciones
+   - `HomeGrid`: Grid personalizable para pantalla principal
+   - `SettingsScreen`: Pantalla completa de configuraciones
+
+3. **Mejoras de UX**:
+   - Gestos intuitivos (deslizar hacia arriba)
+   - Grids completamente personalizables
+   - Animaciones fluidas
+   - Configuraciones persistentes
+
+4. **Configuraciones Añadidas**:
+   - Grid del cajón: 3-6 columnas, 4-8 filas
+   - Grid de pantalla principal: 2-5 columnas, 3-6 filas
+   - Redimensionamiento automático del contenido
+
 ## SIGUIENTES PASOS
 
 ### Inmediatos (Próxima sesión)
-1. **Completar configuración como launcher por defecto**
+1. **Implementar widgets personalizados**
+   - Widget de reloj/fecha
+   - Widget de clima
+   - Widget de accesos directos
+   - Sistema de posicionamiento libre
+
+2. **Completar configuración como launcher por defecto**
    - Implementar método nativo completo
    - Probar configuración automática
    - Manejar casos donde el usuario cancela
 
-2. **Implementar bola flotante básica**
+### Mediano plazo
+3. **Implementar bola flotante básica**
    - Crear servicio de overlay
    - Implementar gestos básicos (tap, long press)
    - Añadir navegación básica (home, back)
 
-### Mediano plazo
-3. **Desarrollar barra de notificaciones**
+4. **Desarrollar barra de notificaciones**
    - Crear interfaz deslizable desde abajo
    - Implementar controles de sistema (brillo, volumen)
    - Integrar notificaciones del sistema
 
-4. **Sistema de widgets básico**
-   - Investigar AppWidget API
-   - Implementar contenedor de widgets
-   - Permitir añadir/quitar widgets
-
 ### Largo plazo
-5. **Optimizaciones y pulido**
-   - Mejorar rendimiento
+5. **Sistema de widgets avanzado**
+   - Investigar AppWidget API
+   - Implementar contenedor de widgets de terceros
+   - Permitir redimensionamiento y reposicionamiento
+
+6. **Optimizaciones y pulido**
+   - Mejorar rendimiento de grids dinámicos
    - Añadir más animaciones
    - Implementar temas personalizados
    - Añadir backup/restore de configuración
 
-6. **Funcionalidades avanzadas**
+7. **Funcionalidades avanzadas**
    - Gestos personalizables
    - Carpetas de aplicaciones
    - Búsqueda global (contactos, archivos, web)
@@ -199,5 +272,6 @@ K Launcher es una aplicación Android launcher personalizada desarrollada en Flu
 
 ---
 Última actualización: [FECHA_ACTUAL]
-Versión: 1.0.0-dev
-Estado del proyecto: En desarrollo activo
+Versión: 1.1.0-dev
+Estado del proyecto: Reestructuración principal completada - En desarrollo activo
+Cambios principales: Nueva arquitectura de pantalla principal, cajón de aplicaciones, configuraciones personalizables
