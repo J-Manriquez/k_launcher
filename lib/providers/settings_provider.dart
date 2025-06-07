@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -61,6 +63,15 @@ class SettingsProvider extends ChangeNotifier {
     _loadSettings();
   }
   
+  // Configuraciones de carpetas
+  bool _showFolderNames = true;
+  bool _showAppNamesInFolders = true;
+  double _folderNameTextSize = 12.0;
+  double _folderIconSize = 48.0;
+  int _defaultFolderColumns = 3;
+  int _defaultFolderRows = 3;
+  Color _defaultFolderBackgroundColor = const Color(0xFF424242);
+  
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -87,6 +98,15 @@ class SettingsProvider extends ChangeNotifier {
       _showDock = prefs.getBool('show_dock') ?? true;
       
       _wallpaperPath = prefs.getString('wallpaper_path') ?? '';
+      
+      // Load folder settings
+      _showFolderNames = prefs.getBool('show_folder_names') ?? true;
+      _showAppNamesInFolders = prefs.getBool('show_app_names_in_folders') ?? true;
+      _folderNameTextSize = prefs.getDouble('folder_name_text_size') ?? 12.0;
+      _folderIconSize = prefs.getDouble('folder_icon_size') ?? 48.0;
+      _defaultFolderColumns = prefs.getInt('default_folder_columns') ?? 3;
+      _defaultFolderRows = prefs.getInt('default_folder_rows') ?? 3;
+      _defaultFolderBackgroundColor = Color(prefs.getInt('default_folder_background_color') ?? 0xFF424242);
       
       notifyListeners();
     } catch (e) {
@@ -182,6 +202,99 @@ class SettingsProvider extends ChangeNotifier {
     
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('home_grid_rows', value);
+  }
+  
+  // Folder getters
+  bool get showFolderNames => _showFolderNames;
+  bool get showAppNamesInFolders => _showAppNamesInFolders;
+  double get folderNameTextSize => _folderNameTextSize;
+  double get folderIconSize => _folderIconSize;
+  int get defaultFolderColumns => _defaultFolderColumns;
+  int get defaultFolderRows => _defaultFolderRows;
+  Color get defaultFolderBackgroundColor => _defaultFolderBackgroundColor;
+  
+  Future<void> setShowFolderNames(bool value) async {
+    _showFolderNames = value;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('show_folder_names', value);
+    } catch (e) {
+      print('Error guardando configuración: $e');
+    }
+  }
+  
+  Future<void> setShowAppNamesInFolders(bool value) async {
+    _showAppNamesInFolders = value;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('show_app_names_in_folders', value);
+    } catch (e) {
+      print('Error guardando configuración: $e');
+    }
+  }
+  
+  Future<void> setFolderNameTextSize(double value) async {
+    _folderNameTextSize = value;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('folder_name_text_size', value);
+    } catch (e) {
+      print('Error guardando configuración: $e');
+    }
+  }
+  
+  Future<void> setFolderIconSize(double value) async {
+    _folderIconSize = value;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('folder_icon_size', value);
+    } catch (e) {
+      print('Error guardando configuración: $e');
+    }
+  }
+  
+  Future<void> setDefaultFolderColumns(int value) async {
+    _defaultFolderColumns = value;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('default_folder_columns', value);
+    } catch (e) {
+      print('Error guardando configuración: $e');
+    }
+  }
+  
+  Future<void> setDefaultFolderRows(int value) async {
+    _defaultFolderRows = value;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('default_folder_rows', value);
+    } catch (e) {
+      print('Error guardando configuración: $e');
+    }
+  }
+  
+  Future<void> setDefaultFolderBackgroundColor(Color value) async {
+    _defaultFolderBackgroundColor = value;
+    notifyListeners();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('default_folder_background_color', value.value);
+    } catch (e) {
+      print('Error guardando configuración: $e');
+    }
   }
   
   void setHomeGridEditMode(bool editMode) {

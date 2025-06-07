@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:k_launcher/models/folder_info.dart';
+import 'package:k_launcher/widgets/folder_widget.dart';
 import 'package:provider/provider.dart';
 import '../models/app_info.dart';
 import '../providers/app_provider.dart';
@@ -63,27 +65,39 @@ class _HomeGridState extends State<HomeGrid> {
             ),
             itemCount: columns * rows,
             itemBuilder: (context, index) {
-              final app = appProvider.getAppAtPosition(index);
+              final item = appProvider.getItemAtPosition(index);
               
-              if (app != null) {
-                return _buildAppSlot(
-                  context,
-                  app,
-                  index,
-                  finalModuleSize,
-                  isEditMode,
-                  appProvider,
-                  settings,
-                );
-              } else {
-                return _buildEmptySlot(
-                  context,
-                  index,
-                  finalModuleSize,
-                  isEditMode,
-                  appProvider,
-                );
+              if (item != null) {
+                if (item is AppInfo) {
+                  return _buildAppSlot(
+                    context,
+                    item,
+                    index,
+                    finalModuleSize,
+                    isEditMode,
+                    appProvider,
+                    settings,
+                  );
+                } else if (item is FolderInfo) {
+                  return _buildFolderSlot(
+                    context,
+                    item,
+                    index,
+                    finalModuleSize,
+                    isEditMode,
+                    appProvider,
+                    settings,
+                  );
+                }
               }
+              
+              return _buildEmptySlot(
+                context,
+                index,
+                finalModuleSize,
+                isEditMode,
+                appProvider,
+              );
             },
           ),
         );
@@ -257,14 +271,33 @@ class _HomeGridState extends State<HomeGrid> {
           _draggedFromPosition = null;
         });
       },
-      child: DragTarget<AppInfo>(
-        onWillAccept: (data) => data != null && data.packageName != app.packageName,
-        onAccept: (draggedApp) {
-          final draggedPosition = appProvider.getPositionOfApp(draggedApp.packageName);
-          if (draggedPosition != null && draggedPosition != position) {
-            // Intercambiar posiciones
-            _swapApps(appProvider, draggedPosition, position);
-            HapticFeedback.mediumImpact();
+      child: DragTarget<Object>(
+        onWillAccept: (data) {
+          if (data is AppInfo) {
+            return data.packageName != app.packageName;
+          } else if (data is FolderInfo) {
+            return true; // Aceptar carpetas
+          }
+          return false;
+        },
+        onAccept: (data) {
+          if (data is AppInfo) {
+            final draggedPosition = appProvider.getPositionOfApp(data.packageName);
+            if (draggedPosition != null && draggedPosition != position) {
+              // Intercambiar posiciones
+              _swapItems(appProvider, draggedPosition, position);
+              HapticFeedback.mediumImpact();
+            }
+          } else if (data is FolderInfo) {
+            final draggedPosition = appProvider.homeGridItems.entries
+                .where((entry) => entry.value is FolderInfo && (entry.value as FolderInfo).id == data.id)
+                .firstOrNull?.key;
+                
+            if (draggedPosition != null && draggedPosition != position) {
+              // Intercambiar posiciones
+              _swapItems(appProvider, draggedPosition, position);
+              HapticFeedback.mediumImpact();
+            }
           }
         },
         builder: (context, candidateData, rejectedData) {
@@ -292,14 +325,25 @@ class _HomeGridState extends State<HomeGrid> {
     bool isEditMode,
     AppProvider appProvider,
   ) {
-    return DragTarget<AppInfo>(
+    return DragTarget<Object>(
+
       onWillAccept: (data) => data != null,
-      onAccept: (app) {
-        final currentPosition = appProvider.getPositionOfApp(app.packageName);
-        if (currentPosition != null) {
-          appProvider.moveAppInHomeGrid(currentPosition, position);
-        } else {
-          appProvider.addToHomeGridPosition(app, position);
+      onAccept: (data) {
+        if (data is AppInfo) {
+          final currentPosition = appProvider.getPositionOfApp(data.packageName);
+          if (currentPosition != null) {
+            appProvider.moveItemInHomeGrid(currentPosition, position);
+          } else {
+            appProvider.addItemToHomeGridPosition(data, position);
+          }
+        } else if (data is FolderInfo) {
+          final currentPosition = appProvider.homeGridItems.entries
+              .where((entry) => entry.value is FolderInfo && (entry.value as FolderInfo).id == data.id)
+              .firstOrNull?.key;
+              
+          if (currentPosition != null) {
+            appProvider.moveItemInHomeGrid(currentPosition, position);
+          }
         }
         HapticFeedback.mediumImpact();
       },
@@ -336,17 +380,17 @@ class _HomeGridState extends State<HomeGrid> {
     );
   }
   
-  void _swapApps(AppProvider appProvider, int fromPosition, int toPosition) {
-    final fromApp = appProvider.getAppAtPosition(fromPosition);
-    final toApp = appProvider.getAppAtPosition(toPosition);
+  void _swapItems(AppProvider appProvider, int fromPosition, int toPosition) {
+    final fromItem = appProvider.getItemAtPosition(fromPosition);
+    final toItem = appProvider.getItemAtPosition(toPosition);
     
-    if (fromApp != null) {
-      appProvider.removeFromHomeGridPosition(fromPosition);
-      if (toApp != null) {
-        appProvider.removeFromHomeGridPosition(toPosition);
-        appProvider.addToHomeGridPosition(toApp, fromPosition);
+    if (fromItem != null) {
+      appProvider.removeItemFromHomeGridPosition(fromPosition);
+      if (toItem != null) {
+        appProvider.removeItemFromHomeGridPosition(toPosition);
+        appProvider.addItemToHomeGridPosition(toItem, fromPosition);
       }
-      appProvider.addToHomeGridPosition(fromApp, toPosition);
+      appProvider.addItemToHomeGridPosition(fromItem, toPosition);
     }
   }
 
@@ -401,4 +445,347 @@ class _HomeGridState extends State<HomeGrid> {
       ),
     );
   }
+  
+  Widget _buildFolderSlot(
+    BuildContext context,
+    FolderInfo folder,
+    int position,
+    double moduleSize,
+    bool isEditMode,
+    AppProvider appProvider,
+    SettingsProvider settings,
+  ) {
+    return isEditMode
+        ? _buildDraggableFolder(
+            FolderWidget(
+              folder: folder,
+              size: moduleSize * 0.8,
+              onTap: () => _openFolder(context, folder, appProvider),
+            ),
+            folder,
+            position,
+            moduleSize,
+            appProvider,
+          )
+        : FolderWidget(
+            folder: folder,
+            size: moduleSize * 0.8,
+            onTap: () => _openFolder(context, folder, appProvider),
+            onLongPress: () {
+              settings.setHomeGridEditMode(true);
+              HapticFeedback.mediumImpact();
+            },
+          );
+  }
+  
+  void _openFolder(BuildContext context, FolderInfo folder, AppProvider appProvider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    folder.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      // Botón para añadir aplicaciones
+                      IconButton(
+                        icon: const Icon(Icons.add, color: Colors.white),
+                        onPressed: () => _showAppSelectionDialog(context, folder, appProvider),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                controller: scrollController,
+                padding: const EdgeInsets.all(16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: folder.columns,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.8,
+                ),
+                itemCount: folder.apps.length,
+                itemBuilder: (context, index) {
+                  final app = folder.apps[index];
+                  return AppIcon(
+                    app: app,
+                    onTap: () {
+                      Navigator.pop(context);
+                      appProvider.launchApp(app.packageName);
+                    },
+                    onLongPress: () => _showFolderAppOptions(
+                      context, 
+                      app, 
+                      folder.id, 
+                      appProvider,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  void _showFolderAppOptions(BuildContext context, AppInfo app, String folderId, AppProvider appProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.info, color: Colors.white),
+            title: const Text('Información de la app', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              // TODO: Abrir información de la app
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.remove_circle, color: Colors.white),
+            title: const Text('Quitar de la carpeta', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              appProvider.removeAppFromFolder(folderId, app.packageName);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${app.name} eliminado de la carpeta'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.home, color: Colors.white),
+            title: const Text('Mover a pantalla principal', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              appProvider.removeAppFromFolder(folderId, app.packageName);
+              appProvider.addToHomeScreen(app);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${app.name} movido a la pantalla principal'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDraggableFolder(
+    Widget folderWidget,
+    FolderInfo folder,
+    int position,
+    double moduleSize,
+    AppProvider appProvider,
+  ) {
+    return LongPressDraggable<Object>(
+      data: folder,
+      delay: const Duration(milliseconds: 100),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(
+          scale: 1.2,
+          child: Container(
+            width: moduleSize,
+            height: moduleSize,
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: folderWidget,
+          ),
+        ),
+      ),
+      childWhenDragging: Container(
+        width: moduleSize,
+        height: moduleSize,
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.5),
+            width: 2,
+          ),
+        ),
+        child: Icon(
+          Icons.folder_open,
+          color: Colors.white.withOpacity(0.5),
+          size: moduleSize * 0.3,
+        ),
+      ),
+      onDragStarted: () {
+        setState(() {
+          _isDragging = true;
+          _draggedFromPosition = position;
+        });
+        HapticFeedback.lightImpact();
+      },
+      onDragEnd: (details) {
+        setState(() {
+          _isDragging = false;
+          _draggedFromPosition = null;
+        });
+      },
+      child: DragTarget<Object>(
+        onWillAccept: (data) {
+          // Aceptar apps o carpetas, pero no la misma carpeta
+          if (data is AppInfo) {
+            return true; // Siempre aceptar apps
+          } else if (data is FolderInfo) {
+            return data.id != folder.id; // Aceptar otras carpetas
+          }
+          return false;
+        },
+        onAccept: (data) {
+          if (data is AppInfo) {
+            // Si es una app, agregarla a la carpeta
+            appProvider.addAppToFolder(folder.id, data);
+            HapticFeedback.mediumImpact();
+          } else if (data is FolderInfo) {
+            // Si es otra carpeta, intercambiar posiciones
+            final draggedPosition = appProvider.homeGridItems.entries
+                .where((entry) => entry.value is FolderInfo && (entry.value as FolderInfo).id == (data as FolderInfo).id)
+                .firstOrNull?.key;
+                
+            if (draggedPosition != null && draggedPosition != position) {
+              // Intercambiar posiciones
+              _swapItems(appProvider, draggedPosition, position);
+              HapticFeedback.mediumImpact();
+            }
+          }
+        },
+        builder: (context, candidateData, rejectedData) {
+          final isHovering = candidateData.isNotEmpty;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: isHovering ? Border.all(
+                color: Colors.blue,
+                width: 2,
+              ) : null,
+            ),
+            child: folderWidget,
+          );
+        },
+      ),
+    );
+  }
+}
+
+void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvider appProvider) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.grey[900],
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Seleccionar aplicaciones",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              controller: scrollController,
+              itemCount: appProvider.installedApps.length,
+              itemBuilder: (context, index) {
+                final app = appProvider.installedApps[index];
+                final isInFolder = folder.apps.any((a) => a.packageName == app.packageName);
+                
+                return ListTile(
+                  leading: app.icon != null
+                    ? Image.memory(app.icon!, width: 40, height: 40)
+                    : const Icon(Icons.android, color: Colors.white),
+                  title: Text(app.name, style: const TextStyle(color: Colors.white)),
+                  trailing: Checkbox(
+                    value: isInFolder,
+                    onChanged: (value) {
+                      if (value == true && !isInFolder) {
+                        appProvider.addAppToFolder(folder.id, app);
+                      } else if (value == false && isInFolder) {
+                        appProvider.removeAppFromFolder(folder.id, app.packageName);
+                      }
+                    },
+                  ),
+                  onTap: () {
+                    if (!isInFolder) {
+                      appProvider.addAppToFolder(folder.id, app);
+                    } else {
+                      appProvider.removeAppFromFolder(folder.id, app.packageName);
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
