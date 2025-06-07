@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:k_launcher/models/folder_info.dart';
+import 'package:k_launcher/models/widget_info.dart';
 import 'package:k_launcher/widgets/folder_widget.dart';
+import 'package:k_launcher/widgets/system_widget.dart';
 import 'package:provider/provider.dart';
 import '../models/app_info.dart';
 import '../providers/app_provider.dart';
@@ -12,13 +14,8 @@ class HomeGrid extends StatefulWidget {
   final List<AppInfo>? apps;
   final Function(AppInfo)? onAppTap;
   final Function(AppInfo)? onAppLongPress;
-  
-  const HomeGrid({
-    super.key,
-    this.apps,
-    this.onAppTap,
-    this.onAppLongPress,
-  });
+
+  const HomeGrid({super.key, this.apps, this.onAppTap, this.onAppLongPress});
 
   @override
   State<HomeGrid> createState() => _HomeGridState();
@@ -27,34 +24,39 @@ class HomeGrid extends StatefulWidget {
 class _HomeGridState extends State<HomeGrid> {
   bool _isDragging = false;
   int? _draggedFromPosition;
-  
+  final Map<int, GlobalKey> _itemKeys = {}; // Nuevo: claves para cada elemento
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<AppProvider, SettingsProvider>(
       builder: (context, appProvider, settings, child) {
         final screenSize = MediaQuery.of(context).size;
-        
+
         // Calculate available screen space
         final availableWidth = screenSize.width;
         final availableHeight = screenSize.height;
-        
+
         // Use home grid settings
         final columns = settings.homeGridColumns;
         final rows = settings.homeGridRows;
         final isEditMode = settings.homeGridEditMode;
-        
+
         // Calculate module size to fit screen (minimum 10x10px, always square)
         final moduleWidth = availableWidth / columns;
         final moduleHeight = availableHeight / rows;
-        final moduleSize = moduleWidth < moduleHeight ? moduleWidth : moduleHeight;
-        
+        final moduleSize = moduleWidth < moduleHeight
+            ? moduleWidth
+            : moduleHeight;
+
         // Ensure minimum size of 10px
         final finalModuleSize = moduleSize < 10 ? 10.0 : moduleSize;
-        
+
         return Container(
           width: availableWidth,
           height: availableHeight,
-          color: isEditMode ? Colors.black.withOpacity(0.1) : Colors.transparent,
+          color: isEditMode
+              ? Colors.black.withOpacity(0.1)
+              : Colors.transparent,
           child: GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -66,7 +68,7 @@ class _HomeGridState extends State<HomeGrid> {
             itemCount: columns * rows,
             itemBuilder: (context, index) {
               final item = appProvider.getItemAtPosition(index);
-              
+
               if (item != null) {
                 if (item is AppInfo) {
                   return _buildAppSlot(
@@ -88,9 +90,19 @@ class _HomeGridState extends State<HomeGrid> {
                     appProvider,
                     settings,
                   );
-                }
+                }else if (item is WidgetInfo) {
+      return _buildWidgetSlot(
+        context,
+        item,
+        index,
+        finalModuleSize,
+        isEditMode,
+        appProvider,
+        settings,
+      );
+    }
               }
-              
+
               return _buildEmptySlot(
                 context,
                 index,
@@ -104,7 +116,7 @@ class _HomeGridState extends State<HomeGrid> {
       },
     );
   }
-  
+
   Widget _buildAppSlot(
     BuildContext context,
     AppInfo app,
@@ -114,16 +126,18 @@ class _HomeGridState extends State<HomeGrid> {
     AppProvider appProvider,
     SettingsProvider settings,
   ) {
+    // Crear una clave única para este elemento
+    _itemKeys[position] ??= GlobalKey();
     Widget appWidget = Container(
+      key: _itemKeys[position],
       width: moduleSize,
       height: moduleSize,
       decoration: BoxDecoration(
         color: isEditMode ? Colors.black.withOpacity(0.2) : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        border: isEditMode ? Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ) : null,
+        border: isEditMode
+            ? Border.all(color: Colors.white.withOpacity(0.1), width: 1)
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
@@ -152,10 +166,7 @@ class _HomeGridState extends State<HomeGrid> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: app.icon != null
-                          ? Image.memory(
-                              app.icon!,
-                              fit: BoxFit.cover,
-                            )
+                          ? Image.memory(app.icon!, fit: BoxFit.cover)
                           : Container(
                               color: Colors.grey[300],
                               child: Icon(
@@ -188,7 +199,7 @@ class _HomeGridState extends State<HomeGrid> {
         ),
       ),
     );
-    
+
     // Envolver en GestureDetector para manejar long press y drag
     return GestureDetector(
       onLongPressStart: (details) {
@@ -198,17 +209,18 @@ class _HomeGridState extends State<HomeGrid> {
           HapticFeedback.mediumImpact();
         }
       },
-      child: isEditMode ? _buildDraggableApp(
-        appWidget,
-        app,
-        position,
-        moduleSize,
-        appProvider,
-      ) : appWidget,
-
+      child: isEditMode
+          ? _buildDraggableApp(
+              appWidget,
+              app,
+              position,
+              moduleSize,
+              appProvider,
+            )
+          : appWidget,
     );
   }
-  
+
   Widget _buildDraggableApp(
     Widget appWidget,
     AppInfo app,
@@ -270,8 +282,13 @@ class _HomeGridState extends State<HomeGrid> {
         setState(() {
           _isDragging = false;
           _draggedFromPosition = null;
-          _showDeleteMenu( context, position, app, appProvider);
-
+          _showDeleteMenu(
+            context,
+            position,
+            app,
+            appProvider,
+            _itemKeys[position],
+          );
         });
       },
       child: DragTarget<Object>(
@@ -285,7 +302,9 @@ class _HomeGridState extends State<HomeGrid> {
         },
         onAccept: (data) {
           if (data is AppInfo) {
-            final draggedPosition = appProvider.getPositionOfApp(data.packageName);
+            final draggedPosition = appProvider.getPositionOfApp(
+              data.packageName,
+            );
             if (draggedPosition != null && draggedPosition != position) {
               // Intercambiar posiciones
               _swapItems(appProvider, draggedPosition, position);
@@ -293,9 +312,14 @@ class _HomeGridState extends State<HomeGrid> {
             }
           } else if (data is FolderInfo) {
             final draggedPosition = appProvider.homeGridItems.entries
-                .where((entry) => entry.value is FolderInfo && (entry.value as FolderInfo).id == data.id)
-                .firstOrNull?.key;
-                
+                .where(
+                  (entry) =>
+                      entry.value is FolderInfo &&
+                      (entry.value as FolderInfo).id == data.id,
+                )
+                .firstOrNull
+                ?.key;
+
             if (draggedPosition != null && draggedPosition != position) {
               // Intercambiar posiciones
               _swapItems(appProvider, draggedPosition, position);
@@ -309,10 +333,9 @@ class _HomeGridState extends State<HomeGrid> {
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: isHovering ? Border.all(
-                color: Colors.blue,
-                width: 2,
-              ) : null,
+              border: isHovering
+                  ? Border.all(color: Colors.blue, width: 2)
+                  : null,
             ),
             child: appWidget,
           );
@@ -320,7 +343,146 @@ class _HomeGridState extends State<HomeGrid> {
       ),
     );
   }
+
   
+Widget _buildDraggableWidget(
+  Widget widgetWidget,
+  WidgetInfo widget,
+  int position,
+  double moduleSize,
+  AppProvider appProvider,
+) {
+  return LongPressDraggable<WidgetInfo>(
+    data: widget,
+    delay: const Duration(milliseconds: 100),
+    feedback: Material(
+      color: Colors.transparent,
+      child: Transform.scale(
+        scale: 1.1,
+        child: Container(
+          width: moduleSize * widget.width,
+          height: moduleSize * widget.height,
+          decoration: BoxDecoration(
+            color: Colors.purple.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: widgetWidget,
+        ),
+      ),
+    ),
+    childWhenDragging: Container(
+      width: moduleSize * widget.width,
+      height: moduleSize * widget.height,
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.5),
+          width: 2,
+        ),
+      ),
+      child: Icon(
+        Icons.widgets,
+        color: Colors.white.withOpacity(0.5),
+        size: moduleSize * 0.3,
+      ),
+    ),
+    onDragStarted: () {
+      setState(() {
+        _isDragging = true;
+        _draggedFromPosition = position;
+      });
+      HapticFeedback.lightImpact();
+    },
+    onDragEnd: (details) {
+      setState(() {
+        _isDragging = false;
+        _draggedFromPosition = null;
+        _showDeleteMenu(context, position, widget, appProvider, _itemKeys[position]);
+      });
+    },
+    child: DragTarget<Object>(
+      onWillAccept: (data) {
+        if (data is WidgetInfo) {
+          return data.id != widget.id;
+        }
+        return data is AppInfo || data is FolderInfo;
+      },
+      onAccept: (data) {
+        if (data is WidgetInfo) {
+          final draggedPosition = appProvider.homeGridItems.entries
+              .where((entry) => entry.value is WidgetInfo && (entry.value as WidgetInfo).id == data.id)
+              .firstOrNull?.key;
+              
+          if (draggedPosition != null && draggedPosition != position) {
+            _swapItems(appProvider, draggedPosition, position);
+            HapticFeedback.mediumImpact();
+          }
+        }
+        // Manejar otros tipos de elementos...
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHovering = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: isHovering ? Border.all(
+              color: Colors.purple,
+              width: 2,
+            ) : null,
+          ),
+          child: widgetWidget,
+        );
+      },
+    ),
+  );
+}
+
+  // Agregar el método _buildWidgetSlot:
+Widget _buildWidgetSlot(
+  BuildContext context,
+  WidgetInfo widget,
+  int position,
+  double moduleSize,
+  bool isEditMode,
+  AppProvider appProvider,
+  SettingsProvider settings,
+) {
+  _itemKeys[position] ??= GlobalKey();
+  
+  return Container(
+    key: _itemKeys[position],
+    child: isEditMode
+        ? _buildDraggableWidget(
+            SystemWidget(
+              widget: widget,
+              moduleSize: moduleSize,
+              onTap: () {}, // Los widgets no se "abren" como las apps
+            ),
+            widget,
+            position,
+            moduleSize,
+            appProvider,
+          )
+        : SystemWidget(
+            widget: widget,
+            moduleSize: moduleSize,
+            onLongPress: () {
+              settings.setHomeGridEditMode(true);
+              HapticFeedback.mediumImpact();
+            },
+          ),
+  );
+}
+
   Widget _buildEmptySlot(
     BuildContext context,
     int position,
@@ -329,11 +491,12 @@ class _HomeGridState extends State<HomeGrid> {
     AppProvider appProvider,
   ) {
     return DragTarget<Object>(
-
       onWillAccept: (data) => data != null,
       onAccept: (data) {
         if (data is AppInfo) {
-          final currentPosition = appProvider.getPositionOfApp(data.packageName);
+          final currentPosition = appProvider.getPositionOfApp(
+            data.packageName,
+          );
           if (currentPosition != null) {
             appProvider.moveItemInHomeGrid(currentPosition, position);
           } else {
@@ -341,9 +504,14 @@ class _HomeGridState extends State<HomeGrid> {
           }
         } else if (data is FolderInfo) {
           final currentPosition = appProvider.homeGridItems.entries
-              .where((entry) => entry.value is FolderInfo && (entry.value as FolderInfo).id == data.id)
-              .firstOrNull?.key;
-              
+              .where(
+                (entry) =>
+                    entry.value is FolderInfo &&
+                    (entry.value as FolderInfo).id == data.id,
+              )
+              .firstOrNull
+              ?.key;
+
           if (currentPosition != null) {
             appProvider.moveItemInHomeGrid(currentPosition, position);
           }
@@ -352,41 +520,45 @@ class _HomeGridState extends State<HomeGrid> {
       },
       builder: (context, candidateData, rejectedData) {
         final isHovering = candidateData.isNotEmpty;
-        
+
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: moduleSize,
           height: moduleSize,
           decoration: BoxDecoration(
-            color: isEditMode 
-                ? (isHovering 
-                    ? Colors.blue.withOpacity(0.3) 
-                    : Colors.transparent)
+            color: isEditMode
+                ? (isHovering
+                      ? Colors.blue.withOpacity(0.3)
+                      : Colors.transparent)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            border: isEditMode ? Border.all(
-              color: isHovering 
-                  ? Colors.blue
-                  : Colors.white.withOpacity(0.1),
-              width: isHovering ? 2 : 1,
-            ) : null,
+            border: isEditMode
+                ? Border.all(
+                    color: isHovering
+                        ? Colors.blue
+                        : Colors.white.withOpacity(0.1),
+                    width: isHovering ? 2 : 1,
+                  )
+                : null,
           ),
-          child: isEditMode ? Icon(
-            isHovering ? Icons.add_circle : Icons.add,
-            color: isHovering 
-                ? Colors.blue
-                : Colors.white.withOpacity(0.3),
-            size: moduleSize * 0.3,
-          ) : null,
+          child: isEditMode
+              ? Icon(
+                  isHovering ? Icons.add_circle : Icons.add,
+                  color: isHovering
+                      ? Colors.blue
+                      : Colors.white.withOpacity(0.3),
+                  size: moduleSize * 0.3,
+                )
+              : null,
         );
       },
     );
   }
-  
+
   void _swapItems(AppProvider appProvider, int fromPosition, int toPosition) {
     final fromItem = appProvider.getItemAtPosition(fromPosition);
     final toItem = appProvider.getItemAtPosition(toPosition);
-    
+
     if (fromItem != null) {
       appProvider.removeItemFromHomeGridPosition(fromPosition);
       if (toItem != null) {
@@ -397,7 +569,11 @@ class _HomeGridState extends State<HomeGrid> {
     }
   }
 
-  void _showAppOptions(BuildContext context, AppInfo app, AppProvider appProvider) {
+  void _showAppOptions(
+    BuildContext context,
+    AppInfo app,
+    AppProvider appProvider,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.grey[900],
@@ -406,7 +582,10 @@ class _HomeGridState extends State<HomeGrid> {
         children: [
           ListTile(
             leading: const Icon(Icons.info, color: Colors.white),
-            title: const Text('Información de la app', style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Información de la app',
+              style: TextStyle(color: Colors.white),
+            ),
             onTap: () {
               Navigator.pop(context);
               // TODO: Abrir información de la app
@@ -414,11 +593,15 @@ class _HomeGridState extends State<HomeGrid> {
           ),
           ListTile(
             leading: Icon(
-              appProvider.isFavorite(app.packageName) ? Icons.favorite : Icons.favorite_border,
+              appProvider.isFavorite(app.packageName)
+                  ? Icons.favorite
+                  : Icons.favorite_border,
               color: Colors.white,
             ),
             title: Text(
-              appProvider.isFavorite(app.packageName) ? 'Quitar de favoritos' : 'Agregar a favoritos',
+              appProvider.isFavorite(app.packageName)
+                  ? 'Quitar de favoritos'
+                  : 'Agregar a favoritos',
               style: const TextStyle(color: Colors.white),
             ),
             onTap: () {
@@ -432,7 +615,10 @@ class _HomeGridState extends State<HomeGrid> {
           ),
           ListTile(
             leading: const Icon(Icons.remove_circle, color: Colors.white),
-            title: const Text('Quitar de pantalla principal', style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Quitar de pantalla principal',
+              style: TextStyle(color: Colors.white),
+            ),
             onTap: () {
               Navigator.pop(context);
               appProvider.removeFromHomeScreen(app.packageName);
@@ -448,7 +634,7 @@ class _HomeGridState extends State<HomeGrid> {
       ),
     );
   }
-  
+
   Widget _buildFolderSlot(
     BuildContext context,
     FolderInfo folder,
@@ -458,30 +644,39 @@ class _HomeGridState extends State<HomeGrid> {
     AppProvider appProvider,
     SettingsProvider settings,
   ) {
-    return isEditMode
-        ? _buildDraggableFolder(
-            FolderWidget(
+    // Crear una clave única para este elemento
+    _itemKeys[position] ??= GlobalKey();
+    return Container(
+      key: _itemKeys[position], // Asignar la clave única
+      child: isEditMode
+          ? _buildDraggableFolder(
+              FolderWidget(
+                folder: folder,
+                size: moduleSize * 0.8,
+                onTap: () => _openFolder(context, folder, appProvider),
+              ),
+              folder,
+              position,
+              moduleSize,
+              appProvider,
+            )
+          : FolderWidget(
               folder: folder,
               size: moduleSize * 0.8,
               onTap: () => _openFolder(context, folder, appProvider),
+              onLongPress: () {
+                settings.setHomeGridEditMode(true);
+                HapticFeedback.mediumImpact();
+              },
             ),
-            folder,
-            position,
-            moduleSize,
-            appProvider,
-          )
-        : FolderWidget(
-            folder: folder,
-            size: moduleSize * 0.8,
-            onTap: () => _openFolder(context, folder, appProvider),
-            onLongPress: () {
-              settings.setHomeGridEditMode(true);
-              HapticFeedback.mediumImpact();
-            },
-          );
+    );
   }
-  
-  void _openFolder(BuildContext context, FolderInfo folder, AppProvider appProvider) {
+
+  void _openFolder(
+    BuildContext context,
+    FolderInfo folder,
+    AppProvider appProvider,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -496,7 +691,7 @@ class _HomeGridState extends State<HomeGrid> {
             (f) => f.id == folder.id,
             orElse: () => folder,
           );
-          
+
           return DraggableScrollableSheet(
             initialChildSize: 0.7,
             minChildSize: 0.5,
@@ -523,10 +718,12 @@ class _HomeGridState extends State<HomeGrid> {
                           IconButton(
                             icon: const Icon(Icons.add, color: Colors.white),
                             onPressed: () => _showAppSelectionDialog(
-                              context, 
-                              updatedFolder, 
+                              context,
+                              updatedFolder,
                               appProvider,
-                              () => setState(() {}), // Callback para actualizar el estado
+                              () => setState(
+                                () {},
+                              ), // Callback para actualizar el estado
                             ),
                           ),
                           IconButton(
@@ -558,11 +755,13 @@ class _HomeGridState extends State<HomeGrid> {
                           appProvider.launchApp(app.packageName);
                         },
                         onLongPress: () => _showFolderAppOptions(
-                          context, 
-                          app, 
-                          updatedFolder.id, 
+                          context,
+                          app,
+                          updatedFolder.id,
                           appProvider,
-                          () => setState(() {}), // Callback para actualizar el estado
+                          () => setState(
+                            () {},
+                          ), // Callback para actualizar el estado
                         ),
                       );
                     },
@@ -575,8 +774,14 @@ class _HomeGridState extends State<HomeGrid> {
       ),
     );
   }
-  
-  void _showFolderAppOptions(BuildContext context, AppInfo app, String folderId, AppProvider appProvider, [VoidCallback? onUpdate]) {
+
+  void _showFolderAppOptions(
+    BuildContext context,
+    AppInfo app,
+    String folderId,
+    AppProvider appProvider, [
+    VoidCallback? onUpdate,
+  ]) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.grey[900],
@@ -585,7 +790,10 @@ class _HomeGridState extends State<HomeGrid> {
         children: [
           ListTile(
             leading: const Icon(Icons.info, color: Colors.white),
-            title: const Text('Información de la app', style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Información de la app',
+              style: TextStyle(color: Colors.white),
+            ),
             onTap: () {
               Navigator.pop(context);
               // TODO: Abrir información de la app
@@ -593,11 +801,15 @@ class _HomeGridState extends State<HomeGrid> {
           ),
           ListTile(
             leading: const Icon(Icons.remove_circle, color: Colors.white),
-            title: const Text('Quitar de la carpeta', style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Quitar de la carpeta',
+              style: TextStyle(color: Colors.white),
+            ),
             onTap: () {
               Navigator.pop(context);
               appProvider.removeAppFromFolder(folderId, app.packageName);
-              if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+              if (onUpdate != null)
+                onUpdate(); // Actualizar la vista de la carpeta
               // ScaffoldMessenger.of(context).showSnackBar(
               //   SnackBar(
               //     content: Text('${app.name} eliminado de la carpeta'),
@@ -608,12 +820,16 @@ class _HomeGridState extends State<HomeGrid> {
           ),
           ListTile(
             leading: const Icon(Icons.home, color: Colors.white),
-            title: const Text('Mover a pantalla principal', style: TextStyle(color: Colors.white)),
+            title: const Text(
+              'Mover a pantalla principal',
+              style: TextStyle(color: Colors.white),
+            ),
             onTap: () {
               Navigator.pop(context);
               appProvider.removeAppFromFolder(folderId, app.packageName);
               appProvider.addToHomeScreen(app);
-              if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+              if (onUpdate != null)
+                onUpdate(); // Actualizar la vista de la carpeta
               // ScaffoldMessenger.of(context).showSnackBar(
               //   SnackBar(
               //     content: Text('${app.name} movido a la pantalla principal'),
@@ -626,7 +842,7 @@ class _HomeGridState extends State<HomeGrid> {
       ),
     );
   }
-  
+
   Widget _buildDraggableFolder(
     Widget folderWidget,
     FolderInfo folder,
@@ -665,10 +881,7 @@ class _HomeGridState extends State<HomeGrid> {
         decoration: BoxDecoration(
           color: Colors.grey.withOpacity(0.3),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.5),
-            width: 2,
-          ),
+          border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
         ),
         child: Icon(
           Icons.folder_open,
@@ -687,8 +900,13 @@ class _HomeGridState extends State<HomeGrid> {
         setState(() {
           _isDragging = false;
           _draggedFromPosition = null;
-          _showDeleteMenu( context, position, folder, appProvider);
-
+          _showDeleteMenu(
+            context,
+            position,
+            folder,
+            appProvider,
+            _itemKeys[position],
+          );
         });
       },
       child: DragTarget<Object>(
@@ -709,9 +927,14 @@ class _HomeGridState extends State<HomeGrid> {
           } else if (data is FolderInfo) {
             // Si es otra carpeta, intercambiar posiciones
             final draggedPosition = appProvider.homeGridItems.entries
-                .where((entry) => entry.value is FolderInfo && (entry.value as FolderInfo).id == (data as FolderInfo).id)
-                .firstOrNull?.key;
-                
+                .where(
+                  (entry) =>
+                      entry.value is FolderInfo &&
+                      (entry.value as FolderInfo).id == (data as FolderInfo).id,
+                )
+                .firstOrNull
+                ?.key;
+
             if (draggedPosition != null && draggedPosition != position) {
               // Intercambiar posiciones
               _swapItems(appProvider, draggedPosition, position);
@@ -725,10 +948,9 @@ class _HomeGridState extends State<HomeGrid> {
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: isHovering ? Border.all(
-                color: Colors.blue,
-                width: 2,
-              ) : null,
+              border: isHovering
+                  ? Border.all(color: Colors.blue, width: 2)
+                  : null,
             ),
             child: folderWidget,
           );
@@ -738,7 +960,12 @@ class _HomeGridState extends State<HomeGrid> {
   }
 }
 
-void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvider appProvider, [VoidCallback? onUpdate]) {
+void _showAppSelectionDialog(
+  BuildContext context,
+  FolderInfo folder,
+  AppProvider appProvider, [
+  VoidCallback? onUpdate,
+]) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -786,24 +1013,34 @@ void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvide
                       (f) => f.id == folder.id,
                       orElse: () => folder,
                     );
-                    final isInFolder = updatedFolder.apps.any((a) => a.packageName == app.packageName);
-                    
+                    final isInFolder = updatedFolder.apps.any(
+                      (a) => a.packageName == app.packageName,
+                    );
+
                     return ListTile(
                       leading: app.icon != null
-                        ? Image.memory(app.icon!, width: 40, height: 40)
-                        : const Icon(Icons.android, color: Colors.white),
-                      title: Text(app.name, style: const TextStyle(color: Colors.white)),
+                          ? Image.memory(app.icon!, width: 40, height: 40)
+                          : const Icon(Icons.android, color: Colors.white),
+                      title: Text(
+                        app.name,
+                        style: const TextStyle(color: Colors.white),
+                      ),
                       trailing: Checkbox(
                         value: isInFolder,
                         onChanged: (value) {
                           if (value == true && !isInFolder) {
                             appProvider.addAppToFolder(folder.id, app);
                             setState(() {}); // Actualizar el estado del diálogo
-                            if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+                            if (onUpdate != null)
+                              onUpdate(); // Actualizar la vista de la carpeta
                           } else if (value == false && isInFolder) {
-                            appProvider.removeAppFromFolder(folder.id, app.packageName);
+                            appProvider.removeAppFromFolder(
+                              folder.id,
+                              app.packageName,
+                            );
                             setState(() {}); // Actualizar el estado del diálogo
-                            if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+                            if (onUpdate != null)
+                              onUpdate(); // Actualizar la vista de la carpeta
                           }
                         },
                       ),
@@ -811,10 +1048,14 @@ void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvide
                         if (!isInFolder) {
                           appProvider.addAppToFolder(folder.id, app);
                         } else {
-                          appProvider.removeAppFromFolder(folder.id, app.packageName);
+                          appProvider.removeAppFromFolder(
+                            folder.id,
+                            app.packageName,
+                          );
                         }
                         setState(() {}); // Actualizar el estado del diálogo
-                        if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+                        if (onUpdate != null)
+                          onUpdate(); // Actualizar la vista de la carpeta
                       },
                     );
                   },
@@ -828,78 +1069,198 @@ void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvide
   );
 }
 
-void _showDeleteMenu(BuildContext context, int position, dynamic item, AppProvider appProvider) {
+void _handleDelete(
+  dynamic item,
+  AppProvider appProvider,
+  BuildContext context,
+) {
+  if (item is AppInfo) {
+    int? appPosition;
+    for (var entry in appProvider.homeGridItems.entries) {
+      if (entry.value is AppInfo &&
+          (entry.value as AppInfo).packageName == item.packageName) {
+        appPosition = entry.key;
+        break;
+      }
+    }
+
+    if (appPosition != null) {
+      appProvider.removeItemFromHomeGridPosition(appPosition);
+    }
+  } else if (item is FolderInfo) {
+    int? folderPosition;
+    for (var entry in appProvider.homeGridItems.entries) {
+      if (entry.value is FolderInfo &&
+          (entry.value as FolderInfo).id == item.id) {
+        folderPosition = entry.key;
+        break;
+      }
+    }
+
+    if (folderPosition != null) {
+      appProvider.removeItemFromHomeGridPosition(folderPosition);
+      appProvider.deleteFolder(item.id);
+    }
+  } else if (item is WidgetInfo) {
+    int? widgetPosition;
+    for (var entry in appProvider.homeGridItems.entries) {
+      if (entry.value is WidgetInfo &&
+          (entry.value as WidgetInfo).id == item.id) {
+        widgetPosition = entry.key;
+        break;
+      }
+    }
+
+    if (widgetPosition != null) {
+      appProvider.removeWidget(item.id);
+    }
+  }
+}
+
+void _showResizeDialog(
+  BuildContext context,
+  WidgetInfo widget,
+  AppProvider appProvider,
+) {
+  int newWidth = widget.width;
+  int newHeight = widget.height;
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          'Cambiar tamaño de ${widget.name}',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Text('Ancho: ', style: TextStyle(color: Colors.white)),
+                Expanded(
+                  child: Slider(
+                    value: newWidth.toDouble(),
+                    min: 1,
+                    max: 6,
+                    divisions: 5,
+                    label: newWidth.toString(),
+                    onChanged: (value) {
+                      setState(() {
+                        newWidth = value.toInt();
+                      });
+                    },
+                  ),
+                ),
+                Text(
+                  newWidth.toString(),
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Text('Alto: ', style: TextStyle(color: Colors.white)),
+                Expanded(
+                  child: Slider(
+                    value: newHeight.toDouble(),
+                    min: 1,
+                    max: 6,
+                    divisions: 5,
+                    label: newHeight.toString(),
+                    onChanged: (value) {
+                      setState(() {
+                        newHeight = value.toInt();
+                      });
+                    },
+                  ),
+                ),
+                Text(
+                  newHeight.toString(),
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancelar', style: TextStyle(color: Colors.white)),
+          ),
+          TextButton(
+            onPressed: () {
+              appProvider.updateWidgetSize(widget.id, newWidth, newHeight);
+              Navigator.pop(context);
+            },
+            child: Text('Aplicar', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+void _showDeleteMenu(
+  BuildContext context,
+  int position,
+  dynamic item,
+  AppProvider appProvider,
+  GlobalKey? itemKey,
+) {
+  // Usar la clave específica del elemento para obtener su posición
+
+  if (itemKey?.currentContext == null) return;
   // Obtener la posición global del widget actual
-  final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+  final RenderBox? renderBox =
+      itemKey!.currentContext!.findRenderObject() as RenderBox?;
   if (renderBox == null) return;
-  
+
   // Calcular la posición en la pantalla
   final Offset offset = renderBox.localToGlobal(Offset.zero);
   final Size size = renderBox.size;
-  
+
   // Mostrar el menú en la posición del icono
   showMenu(
     context: context,
     position: RelativeRect.fromLTRB(
-      offset.dx,
+      offset.dx + size.width, // Posicionar a la derecha del icono
       offset.dy,
-      offset.dx + size.width,
+      offset.dx + size.width + 200, // Ancho del menú
       offset.dy + size.height,
     ),
     items: [
       PopupMenuItem(
         value: 'delete',
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.delete, color: Colors.red),
             SizedBox(width: 8),
-            Text('Eliminar', style: TextStyle(color: Colors.red),),
+            Text('Eliminar', style: TextStyle(color: Colors.red)),
           ],
         ),
       ),
+      if (item is WidgetInfo) // Nuevo: opción para widgets
+        PopupMenuItem(
+          value: 'resize',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.aspect_ratio, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Cambiar tamaño', style: TextStyle(color: Colors.blue)),
+            ],
+          ),
+        ),
     ],
   ).then((value) {
     if (value == 'delete') {
-      if (item is AppInfo) {
-        // Buscar la posición de la app en _homeGridItems
-        int? appPosition;
-        for (var entry in appProvider.homeGridItems.entries) {
-          if (entry.value is AppInfo && (entry.value as AppInfo).packageName == item.packageName) {
-            appPosition = entry.key;
-            break;
-          }
-        }
-        
-        if (appPosition != null) {
-          appProvider.removeItemFromHomeGridPosition(appPosition);
-          // ScaffoldMessenger.of(context).showSnackBar(
-          //   SnackBar(
-          //     content: Text('${item.name} eliminado de la pantalla principal'),
-          //     duration: const Duration(seconds: 2),
-          //   ),
-          // );
-        }
-      } else if (item is FolderInfo) {
-        // Buscar la posición de la carpeta en _homeGridItems
-        int? folderPosition;
-        for (var entry in appProvider.homeGridItems.entries) {
-          if (entry.value is FolderInfo && (entry.value as FolderInfo).id == item.id) {
-            folderPosition = entry.key;
-            break;
-          }
-        }
-        
-        if (folderPosition != null) {
-          appProvider.removeItemFromHomeGridPosition(folderPosition);
-          appProvider.deleteFolder(item.id);
-          // ScaffoldMessenger.of(context).showSnackBar(
-          //   SnackBar(
-          //     content: Text('${item.name} eliminado'),
-          //     duration: const Duration(seconds: 2),
-          //   ),
-          // );
-        }
-      }
+      _handleDelete(item, appProvider, context);
+    } else if (value == 'resize' && item is WidgetInfo) {
+      _showResizeDialog(context, item, appProvider);
     }
   });
 }
