@@ -205,6 +205,7 @@ class _HomeGridState extends State<HomeGrid> {
         moduleSize,
         appProvider,
       ) : appWidget,
+
     );
   }
   
@@ -269,6 +270,8 @@ class _HomeGridState extends State<HomeGrid> {
         setState(() {
           _isDragging = false;
           _draggedFromPosition = null;
+          _showDeleteMenu( context, position, app, appProvider);
+
         });
       },
       child: DragTarget<Object>(
@@ -433,12 +436,12 @@ class _HomeGridState extends State<HomeGrid> {
             onTap: () {
               Navigator.pop(context);
               appProvider.removeFromHomeScreen(app.packageName);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${app.name} eliminado de la pantalla principal'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+              // ScaffoldMessenger.of(context).showSnackBar(
+              //   SnackBar(
+              //     content: Text('${app.name} eliminado de la pantalla principal'),
+              //     duration: const Duration(seconds: 2),
+              //   ),
+              // );
             },
           ),
         ],
@@ -486,78 +489,94 @@ class _HomeGridState extends State<HomeGrid> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    folder.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          // Obtener la carpeta actualizada del provider
+          final updatedFolder = appProvider.folders.firstWhere(
+            (f) => f.id == folder.id,
+            orElse: () => folder,
+          );
+          
+          return DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) => Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Botón para añadir aplicaciones
-                      IconButton(
-                        icon: const Icon(Icons.add, color: Colors.white),
-                        onPressed: () => _showAppSelectionDialog(context, folder, appProvider),
+                      Text(
+                        updatedFolder.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
+                      Row(
+                        children: [
+                          // Botón para añadir aplicaciones
+                          IconButton(
+                            icon: const Icon(Icons.add, color: Colors.white),
+                            onPressed: () => _showAppSelectionDialog(
+                              context, 
+                              updatedFolder, 
+                              appProvider,
+                              () => setState(() {}), // Callback para actualizar el estado
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: GridView.builder(
-                controller: scrollController,
-                padding: const EdgeInsets.all(16),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: folder.columns,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.8,
                 ),
-                itemCount: folder.apps.length,
-                itemBuilder: (context, index) {
-                  final app = folder.apps[index];
-                  return AppIcon(
-                    app: app,
-                    onTap: () {
-                      Navigator.pop(context);
-                      appProvider.launchApp(app.packageName);
-                    },
-                    onLongPress: () => _showFolderAppOptions(
-                      context, 
-                      app, 
-                      folder.id, 
-                      appProvider,
+                Expanded(
+                  child: GridView.builder(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: updatedFolder.columns,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.8,
                     ),
-                  );
-                },
-              ),
+                    itemCount: updatedFolder.apps.length,
+                    itemBuilder: (context, index) {
+                      final app = updatedFolder.apps[index];
+                      return AppIcon(
+                        app: app,
+                        onTap: () {
+                          Navigator.pop(context);
+                          appProvider.launchApp(app.packageName);
+                        },
+                        onLongPress: () => _showFolderAppOptions(
+                          context, 
+                          app, 
+                          updatedFolder.id, 
+                          appProvider,
+                          () => setState(() {}), // Callback para actualizar el estado
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
   
-  void _showFolderAppOptions(BuildContext context, AppInfo app, String folderId, AppProvider appProvider) {
+  void _showFolderAppOptions(BuildContext context, AppInfo app, String folderId, AppProvider appProvider, [VoidCallback? onUpdate]) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.grey[900],
@@ -578,12 +597,13 @@ class _HomeGridState extends State<HomeGrid> {
             onTap: () {
               Navigator.pop(context);
               appProvider.removeAppFromFolder(folderId, app.packageName);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${app.name} eliminado de la carpeta'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+              if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+              // ScaffoldMessenger.of(context).showSnackBar(
+              //   SnackBar(
+              //     content: Text('${app.name} eliminado de la carpeta'),
+              //     duration: const Duration(seconds: 2),
+              //   ),
+              // );
             },
           ),
           ListTile(
@@ -593,12 +613,13 @@ class _HomeGridState extends State<HomeGrid> {
               Navigator.pop(context);
               appProvider.removeAppFromFolder(folderId, app.packageName);
               appProvider.addToHomeScreen(app);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${app.name} movido a la pantalla principal'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
+              if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+              // ScaffoldMessenger.of(context).showSnackBar(
+              //   SnackBar(
+              //     content: Text('${app.name} movido a la pantalla principal'),
+              //     duration: const Duration(seconds: 2),
+              //   ),
+              // );
             },
           ),
         ],
@@ -666,6 +687,8 @@ class _HomeGridState extends State<HomeGrid> {
         setState(() {
           _isDragging = false;
           _draggedFromPosition = null;
+          _showDeleteMenu( context, position, folder, appProvider);
+
         });
       },
       child: DragTarget<Object>(
@@ -715,7 +738,7 @@ class _HomeGridState extends State<HomeGrid> {
   }
 }
 
-void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvider appProvider) {
+void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvider appProvider, [VoidCallback? onUpdate]) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -723,69 +746,160 @@ void _showAppSelectionDialog(BuildContext context, FolderInfo folder, AppProvide
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (context) => DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Seleccionar aplicaciones",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Seleccionar aplicaciones",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              itemCount: appProvider.installedApps.length,
-              itemBuilder: (context, index) {
-                final app = appProvider.installedApps[index];
-                final isInFolder = folder.apps.any((a) => a.packageName == app.packageName);
-                
-                return ListTile(
-                  leading: app.icon != null
-                    ? Image.memory(app.icon!, width: 40, height: 40)
-                    : const Icon(Icons.android, color: Colors.white),
-                  title: Text(app.name, style: const TextStyle(color: Colors.white)),
-                  trailing: Checkbox(
-                    value: isInFolder,
-                    onChanged: (value) {
-                      if (value == true && !isInFolder) {
-                        appProvider.addAppToFolder(folder.id, app);
-                      } else if (value == false && isInFolder) {
-                        appProvider.removeAppFromFolder(folder.id, app.packageName);
-                      }
-                    },
-                  ),
-                  onTap: () {
-                    if (!isInFolder) {
-                      appProvider.addAppToFolder(folder.id, app);
-                    } else {
-                      appProvider.removeAppFromFolder(folder.id, app.packageName);
-                    }
+              ),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: appProvider.installedApps.length,
+                  itemBuilder: (context, index) {
+                    final app = appProvider.installedApps[index];
+                    // Obtener la carpeta actualizada para verificar si la app está en ella
+                    final updatedFolder = appProvider.folders.firstWhere(
+                      (f) => f.id == folder.id,
+                      orElse: () => folder,
+                    );
+                    final isInFolder = updatedFolder.apps.any((a) => a.packageName == app.packageName);
+                    
+                    return ListTile(
+                      leading: app.icon != null
+                        ? Image.memory(app.icon!, width: 40, height: 40)
+                        : const Icon(Icons.android, color: Colors.white),
+                      title: Text(app.name, style: const TextStyle(color: Colors.white)),
+                      trailing: Checkbox(
+                        value: isInFolder,
+                        onChanged: (value) {
+                          if (value == true && !isInFolder) {
+                            appProvider.addAppToFolder(folder.id, app);
+                            setState(() {}); // Actualizar el estado del diálogo
+                            if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+                          } else if (value == false && isInFolder) {
+                            appProvider.removeAppFromFolder(folder.id, app.packageName);
+                            setState(() {}); // Actualizar el estado del diálogo
+                            if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+                          }
+                        },
+                      ),
+                      onTap: () {
+                        if (!isInFolder) {
+                          appProvider.addAppToFolder(folder.id, app);
+                        } else {
+                          appProvider.removeAppFromFolder(folder.id, app.packageName);
+                        }
+                        setState(() {}); // Actualizar el estado del diálogo
+                        if (onUpdate != null) onUpdate(); // Actualizar la vista de la carpeta
+                      },
+                    );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     ),
   );
+}
+
+void _showDeleteMenu(BuildContext context, int position, dynamic item, AppProvider appProvider) {
+  // Obtener la posición global del widget actual
+  final RenderBox? renderBox = context.findRenderObject() as RenderBox?;
+  if (renderBox == null) return;
+  
+  // Calcular la posición en la pantalla
+  final Offset offset = renderBox.localToGlobal(Offset.zero);
+  final Size size = renderBox.size;
+  
+  // Mostrar el menú en la posición del icono
+  showMenu(
+    context: context,
+    position: RelativeRect.fromLTRB(
+      offset.dx,
+      offset.dy,
+      offset.dx + size.width,
+      offset.dy + size.height,
+    ),
+    items: [
+      PopupMenuItem(
+        value: 'delete',
+        child: Row(
+          children: [
+            Icon(Icons.delete, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Eliminar', style: TextStyle(color: Colors.red),),
+          ],
+        ),
+      ),
+    ],
+  ).then((value) {
+    if (value == 'delete') {
+      if (item is AppInfo) {
+        // Buscar la posición de la app en _homeGridItems
+        int? appPosition;
+        for (var entry in appProvider.homeGridItems.entries) {
+          if (entry.value is AppInfo && (entry.value as AppInfo).packageName == item.packageName) {
+            appPosition = entry.key;
+            break;
+          }
+        }
+        
+        if (appPosition != null) {
+          appProvider.removeItemFromHomeGridPosition(appPosition);
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   SnackBar(
+          //     content: Text('${item.name} eliminado de la pantalla principal'),
+          //     duration: const Duration(seconds: 2),
+          //   ),
+          // );
+        }
+      } else if (item is FolderInfo) {
+        // Buscar la posición de la carpeta en _homeGridItems
+        int? folderPosition;
+        for (var entry in appProvider.homeGridItems.entries) {
+          if (entry.value is FolderInfo && (entry.value as FolderInfo).id == item.id) {
+            folderPosition = entry.key;
+            break;
+          }
+        }
+        
+        if (folderPosition != null) {
+          appProvider.removeItemFromHomeGridPosition(folderPosition);
+          appProvider.deleteFolder(item.id);
+          // ScaffoldMessenger.of(context).showSnackBar(
+          //   SnackBar(
+          //     content: Text('${item.name} eliminado'),
+          //     duration: const Duration(seconds: 2),
+          //   ),
+          // );
+        }
+      }
+    }
+  });
 }

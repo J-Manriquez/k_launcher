@@ -14,7 +14,7 @@ class AppProvider extends ChangeNotifier {
   List<AppInfo> _favoriteApps = [];
   List<AppInfo> _homeScreenApps = [];
   List<List<AppInfo>> _homeScreenPages = [[]];
-  Map<int, AppInfo> _homeGridPositions = {}; // Nueva: posiciones específicas en el grid
+  // Eliminada la variable _homeGridPositions
   File? _currentWallpaper;
   bool _isLoading = false;
   String _searchQuery = '';
@@ -25,13 +25,13 @@ class AppProvider extends ChangeNotifier {
   List<AppInfo> get favoriteApps => _favoriteApps;
   List<AppInfo> get homeScreenApps => _homeScreenApps;
   List<List<AppInfo>> get homeScreenPages => _homeScreenPages;
-  Map<int, AppInfo> get homeGridPositions => _homeGridPositions;
+  // Eliminado el getter homeGridPositions
   File? get currentWallpaper => _currentWallpaper;
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
   
   AppProvider() {
-    _loadHomeGridPositions();
+    // Eliminada la llamada a _loadHomeGridPositions
     _loadFolders();
     _loadHomeGridItems();
   }
@@ -51,7 +51,7 @@ class AppProvider extends ChangeNotifier {
       await _loadCurrentWallpaper();
       
       // Cargar posiciones del grid guardadas
-      await _loadHomeGridPositions();
+      await _loadHomeGridItems();
     } catch (e) {
       print('Error cargando aplicaciones: $e');
     } finally {
@@ -116,96 +116,20 @@ class AppProvider extends ChangeNotifier {
     }
   }
   
-  // Nuevos métodos para manejar posiciones específicas en el grid
-  void addToHomeGridPosition(AppInfo app, int position) {
-    _homeGridPositions[position] = app;
-    _updateHomeScreenApps();
-    _saveHomeGridPositions();
-    notifyListeners();
-  }
   
-  void removeFromHomeGridPosition(int position) {
-    _homeGridPositions.remove(position);
-    _updateHomeScreenApps();
-    _saveHomeGridPositions();
-    notifyListeners();
-  }
+
   
-  void moveAppInHomeGrid(int fromPosition, int toPosition) {
-    if (_homeGridPositions.containsKey(fromPosition)) {
-      final app = _homeGridPositions[fromPosition]!;
-      _homeGridPositions.remove(fromPosition);
-      _homeGridPositions[toPosition] = app;
-      _updateHomeScreenApps();
-      _saveHomeGridPositions();
-      notifyListeners();
-    }
-  }
-  
-  AppInfo? getAppAtPosition(int position) {
-    return _homeGridPositions[position];
-  }
-  
+  // Método actualizado para usar solo _homeGridItems
   int? getPositionOfApp(String packageName) {
-    for (var entry in _homeGridPositions.entries) {
-      if (entry.value.packageName == packageName) {
+    for (var entry in _homeGridItems.entries) {
+      if (entry.value is AppInfo && (entry.value as AppInfo).packageName == packageName) {
         return entry.key;
       }
     }
     return null;
   }
   
-  Future<void> _saveHomeGridPositions() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final Map<String, String> positionsMap = {};
-      
-      for (var entry in _homeGridPositions.entries) {
-        positionsMap[entry.key.toString()] = jsonEncode({
-          'packageName': entry.value.packageName,
-          'name': entry.value.name,
-        });
-      }
-      
-      await prefs.setString('home_grid_positions', jsonEncode(positionsMap));
-    } catch (e) {
-      print('Error guardando posiciones del grid: $e');
-    }
-  }
-  
-  Future<void> _loadHomeGridPositions() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? positionsJson = prefs.getString('home_grid_positions');
-      
-      if (positionsJson != null) {
-        final Map<String, dynamic> positionsMap = jsonDecode(positionsJson);
-        _homeGridPositions.clear();
-        
-        for (var entry in positionsMap.entries) {
-          final int position = int.parse(entry.key);
-          final Map<String, dynamic> appData = jsonDecode(entry.value);
-          
-          // Buscar la app en las aplicaciones instaladas
-          final app = _installedApps.firstWhere(
-            (installedApp) => installedApp.packageName == appData['packageName'],
-            orElse: () => AppInfo(
-              packageName: appData['packageName'],
-              name: appData['name'],
-              icon: null,
-            ),
-          );
-          
-          _homeGridPositions[position] = app;
-        }
-        
-        _updateHomeScreenApps();
-      }
-    } catch (e) {
-      print('Error cargando posiciones del grid: $e');
-    }
-  }
-  
+  // Método actualizado para usar solo _homeGridItems
   void addToHomeScreen(AppInfo app, {int pageIndex = 0}) {
     // Buscar la primera posición disponible
     int position = 0;
@@ -215,21 +139,36 @@ class AppProvider extends ChangeNotifier {
     addItemToHomeGridPosition(app, position);
   }
   
+  // Método actualizado para usar solo _homeGridItems
   void removeFromHomeScreen(String packageName) {
     final position = getPositionOfApp(packageName);
     if (position != null) {
-      removeFromHomeGridPosition(position);
+      removeItemFromHomeGridPosition(position);
     }
   }
   
-  void moveAppInHomeScreen(int fromPageIndex, int fromIndex, int toPageIndex, int toIndex) {
-    // Esta función ahora usa el nuevo sistema de posiciones
-    moveAppInHomeGrid(fromIndex, toIndex);
+  // Método actualizado para usar solo _homeGridItems
+  void _updateHomeScreenApps() {
+    _homeScreenApps = _homeGridItems.entries
+        .where((entry) => entry.value is AppInfo)
+        .map((entry) => entry.value as AppInfo)
+        .toList();
   }
   
-  void _updateHomeScreenApps() {
-    _homeScreenApps = _homeGridPositions.values.toList();
+  // Método actualizado para usar solo _homeGridItems
+  bool isInHomeScreen(String packageName) {
+    return _homeGridItems.entries
+        .where((entry) => entry.value is AppInfo)
+        .any((entry) => (entry.value as AppInfo).packageName == packageName);
   }
+  
+
+  
+
+  
+
+  
+
   
   void addToFavorites(AppInfo app) {
     if (!_favoriteApps.any((favApp) => favApp.packageName == app.packageName)) {
@@ -247,9 +186,6 @@ class AppProvider extends ChangeNotifier {
     return _favoriteApps.any((app) => app.packageName == packageName);
   }
   
-  bool isInHomeScreen(String packageName) {
-    return _homeGridPositions.values.any((app) => app.packageName == packageName);
-  }
   
   List<FolderInfo> _folders = [];
   Map<int, dynamic> _homeGridItems = {}; // Puede contener AppInfo o FolderInfo
@@ -280,49 +216,46 @@ class AppProvider extends ChangeNotifier {
   void addAppToFolder(String folderId, AppInfo app) {
     final folderIndex = _folders.indexWhere((f) => f.id == folderId);
     if (folderIndex != -1) {
-    // Crear una nueva lista con todos los elementos existentes más el nuevo
-    _folders[folderIndex].apps = [..._folders[folderIndex].apps, app];
-    
-    // Buscar la posición de la app en ambos mapas
-    final appPositionInPositions = getPositionOfApp(app.packageName);
-    
-    // Buscar la posición de la app en _homeGridItems
-    int? appPositionInItems;
-    for (var entry in _homeGridItems.entries) {
-      if (entry.value is AppInfo && (entry.value as AppInfo).packageName == app.packageName) {
-        appPositionInItems = entry.key;
-        break;
+      // Verificar si la app ya existe en la carpeta para evitar duplicados
+      if (_folders[folderIndex].apps.any((a) => a.packageName == app.packageName)) {
+        return; // Si ya existe, no hacer nada
       }
-    }
-    
-    // Remover app del grid principal si está en alguno de los mapas
-    if (appPositionInPositions != null) {
-      _homeGridPositions.remove(appPositionInPositions);
-    }
-    
-    if (appPositionInItems != null) {
-      _homeGridItems.remove(appPositionInItems);
-    }
-    
-    // Buscar la posición de la carpeta en _homeGridItems para actualizarla
-    int? folderPosition;
-    for (var entry in _homeGridItems.entries) {
-      if (entry.value is FolderInfo && (entry.value as FolderInfo).id == folderId) {
-        folderPosition = entry.key;
-        break;
+      
+      // Crear una nueva lista con todos los elementos existentes más el nuevo
+      _folders[folderIndex].apps = [..._folders[folderIndex].apps, app];
+      
+      // Buscar la posición de la app en _homeGridItems
+      int? appPositionInItems;
+      for (var entry in _homeGridItems.entries) {
+        if (entry.value is AppInfo && (entry.value as AppInfo).packageName == app.packageName) {
+          appPositionInItems = entry.key;
+          break;
+        }
       }
-    }
-    
-    // Actualizar la carpeta en _homeGridItems si existe
-    if (folderPosition != null) {
-      _homeGridItems[folderPosition] = _folders[folderIndex];
-    }
-    
-    _updateHomeScreenApps();
-    _saveFolders();
-    _saveHomeGridItems();
-    _saveHomeGridPositions();
-    notifyListeners();
+      
+      // Remover app del grid principal si está en el mapa
+      if (appPositionInItems != null) {
+        _homeGridItems.remove(appPositionInItems);
+      }
+      
+      // Buscar la posición de la carpeta en _homeGridItems para actualizarla
+      int? folderPosition;
+      for (var entry in _homeGridItems.entries) {
+        if (entry.value is FolderInfo && (entry.value as FolderInfo).id == folderId) {
+          folderPosition = entry.key;
+          break;
+        }
+      }
+      
+      // Actualizar la carpeta en _homeGridItems si existe
+      if (folderPosition != null) {
+        _homeGridItems[folderPosition] = _folders[folderIndex];
+      }
+      
+      _updateHomeScreenApps();
+      _saveFolders();
+      _saveHomeGridItems();
+      notifyListeners();
     }
   }
   
@@ -330,7 +263,23 @@ class AppProvider extends ChangeNotifier {
     final folderIndex = _folders.indexWhere((f) => f.id == folderId);
     if (folderIndex != -1) {
       _folders[folderIndex].apps.removeWhere((app) => app.packageName == packageName);
+      
+      // Buscar la posición de la carpeta en _homeGridItems para actualizarla
+      int? folderPosition;
+      for (var entry in _homeGridItems.entries) {
+        if (entry.value is FolderInfo && (entry.value as FolderInfo).id == folderId) {
+          folderPosition = entry.key;
+          break;
+        }
+      }
+      
+      // Actualizar la carpeta en _homeGridItems si existe
+      if (folderPosition != null) {
+        _homeGridItems[folderPosition] = _folders[folderIndex];
+      }
+      
       _saveFolders();
+      _saveHomeGridItems();
       notifyListeners();
     }
   }

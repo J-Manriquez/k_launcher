@@ -32,8 +32,9 @@ class FolderWidget extends StatelessWidget {
               Expanded(
                 flex: 3,
                 child: Container(
-                  width: size,
-                  height: size,
+                  width: size + size*0.25,
+                  // height: size - size*0.5,
+                  margin: EdgeInsets.only(bottom: size*0.4, top: 1), // Añade un margen de 8.0 en todas las direcciones,
                   decoration: BoxDecoration(
                     color: folder.backgroundColor,
                     borderRadius: BorderRadius.circular(12),
