@@ -1,12 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:k_launcher/models/app_info.dart';
+import 'package:k_launcher/providers/settings_provider.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/launcher_service.dart';
 import '../widgets/home_grid.dart';
-import '../widgets/dock.dart';
 import '../widgets/wallpaper_selector.dart';
 import '../widgets/app_drawer.dart';
-import 'settings_screen.dart';
+import 'settings_general_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,11 +21,14 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _drawerAnimationController;
   late Animation<double> _drawerAnimation;
+  late PageController _homePageController;
   bool _isDrawerOpen = false;
+  int _currentHomePage = 0;
   
   @override
   void initState() {
     super.initState();
+    _homePageController = PageController();
     _drawerAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -43,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    _homePageController.dispose();
     _drawerAnimationController.dispose();
     super.dispose();
   }
@@ -62,27 +69,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _showWallpaperSelector() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const WallpaperSelector(),
-    );
-  }
-
-  void _showSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SettingsScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Consumer<AppProvider>(
-        builder: (context, appProvider, child) {
+      body: Consumer2<AppProvider, SettingsProvider>(
+        builder: (context, appProvider, settings, child) {
           return Stack(
             children: [
               // Fondo de pantalla
@@ -107,143 +98,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               // Contenido principal
               GestureDetector(
                 onVerticalDragUpdate: (details) {
-                  // Detectar deslizamiento hacia arriba
                   if (details.delta.dy < -5 && !_isDrawerOpen) {
                     _openDrawer();
                   }
                 },
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      // Barra superior
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Indicador de tiempo
-                            StreamBuilder(
-                              stream: Stream.periodic(const Duration(minutes: 1)),
-                              builder: (context, snapshot) {
-                                final now = DateTime.now();
-                                return Text(
-                                  '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                );
-                              },
-                            ),
-                            
-                            // Menú de opciones
-                            PopupMenuButton<String>(
-                              onSelected: (value) {
-                                switch (value) {
-                                  case 'wallpaper':
-                                    _showWallpaperSelector();
-                                    break;
-                                  case 'settings':
-                                    _showSettings();
-                                    break;
-                                  case 'widgets':
-                                    // TODO: Implementar gestión de widgets
-                                    break;
-                                }
-                              },
-                              icon: const Icon(Icons.more_vert, color: Colors.white),
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 'wallpaper',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.wallpaper),
-                                      SizedBox(width: 8),
-                                      Text('Cambiar fondo'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'widgets',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.widgets),
-                                      SizedBox(width: 8),
-                                      Text('Widgets'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'settings',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.settings),
-                                      SizedBox(width: 8),
-                                      Text('Configuración'),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                child: Column(
+                  children: [                    
+                    // Grid principal - usar solo HomeGrid
+                    Expanded(
+                      child: HomeGrid(
+                        onAppTap: (app) => appProvider.launchApp(app.packageName),
+                        onAppLongPress: (app) => _showHomeAppOptions(context, app),
                       ),
+                    ),
                       
-                      // Área principal con widgets/aplicaciones favoritas
-                      const Expanded(
-                        child: HomeGrid(),
-                      ),
-                      
-                      // Indicador para deslizar hacia arriba
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.keyboard_arrow_up,
-                              color: Colors.white.withOpacity(0.7),
-                              size: 24,
-                            ),
-                            Text(
-                              'Desliza hacia arriba',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      
-                      // Dock inferior
-                      const Dock(),
-                    ],
-                  ),
+                  ],
                 ),
               ),
               
-              // Cajón de aplicaciones
+              // App Drawer
               if (_isDrawerOpen)
-                GestureDetector(
-                  onTap: _closeDrawer,
-                  child: Container(
-                    color: Colors.black.withOpacity(0.5),
-                  ),
-                ),
-              
-              if (_isDrawerOpen)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 1),
-                      end: Offset.zero,
-                    ).animate(_drawerAnimation),
-                    child: AppDrawer(onClose: _closeDrawer),
-                  ),
+                AnimatedBuilder(
+                  animation: _drawerAnimation,
+                  builder: (context, child) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, 1),
+                        end: Offset.zero,
+                      ).animate(_drawerAnimation),
+                      child: AppDrawer(onClose: _closeDrawer),
+                    );
+                  },
                 ),
             ],
           );
@@ -251,4 +136,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
+  
+  // void _showWallpaperSelector() {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     backgroundColor: Colors.transparent,
+  //     builder: (context) => const WallpaperSelector(),
+  //   );
+  // }
+
+  // void _showSettings() {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(builder: (context) => const SettingsScreen()),
+  //   );
+  // }
+  
+  void _showHomeAppOptions(BuildContext context, AppInfo app) {
+    // TODO: Implement home screen app options (move, remove, create folder)
+  }
+  
 }

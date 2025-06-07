@@ -1,8 +1,11 @@
 package com.example.k_launcher
 
 import android.app.AppOpsManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -70,6 +73,13 @@ class MainActivity : FlutterActivity() {
                 }
                 "setAsDefaultLauncher" -> {
                     setAsDefaultLauncher()
+                    result.success(null)
+                }
+                "isDefaultLauncher" -> {
+                    result.success(isDefaultLauncher())
+                }
+                "resetDefaultLauncher" -> {
+                    resetDefaultLauncher()
                     result.success(null)
                 }
                 else -> {
@@ -228,8 +238,45 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun setAsDefaultLauncher() {
-        val intent = Intent(Settings.ACTION_HOME_SETTINGS)
-        startActivity(intent)
+        try {
+            // Crear intent para abrir configuración de launcher por defecto
+            val intent = Intent(Settings.ACTION_HOME_SETTINGS)
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Si no funciona, intentar con intent alternativo
+            try {
+                val intent = Intent("android.settings.HOME_SETTINGS")
+                startActivity(intent)
+            } catch (e2: Exception) {
+                // Como último recurso, abrir configuraciones de aplicaciones
+                val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+                startActivity(intent)
+            }
+        }
+    }
+    
+    private fun isDefaultLauncher(): Boolean {
+        return try {
+            val intent = Intent(Intent.ACTION_MAIN)
+            intent.addCategory(Intent.CATEGORY_HOME)
+            val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+            val currentHomePackage = resolveInfo?.activityInfo?.packageName
+            currentHomePackage == packageName
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    private fun resetDefaultLauncher() {
+        try {
+            // Limpiar preferencias de launcher por defecto
+            val intent = Intent(Settings.ACTION_HOME_SETTINGS)
+            startActivity(intent)
+        } catch (e: Exception) {
+            // Fallback: abrir configuraciones de aplicaciones
+            val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+            startActivity(intent)
+        }
     }
     
     private fun hasStorageManagementPermission(): Boolean {

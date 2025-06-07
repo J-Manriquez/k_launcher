@@ -18,24 +18,24 @@ class WallpaperService {
 
       final wallpaperManager = WallpaperManagerFlutter();
       
-      // Convertir la ubicación a la constante correcta del plugin
-      String wallpaperLocation;
+      // Fix: Use the correct constants directly
+      int wallpaperLocation;
       switch (location) {
         case HOME_SCREEN:
-          wallpaperLocation = WallpaperManagerFlutter.homeScreen as String;
+          wallpaperLocation = WallpaperManagerFlutter.homeScreen;
           break;
         case LOCK_SCREEN:
-          wallpaperLocation = WallpaperManagerFlutter.lockScreen as String;
+          wallpaperLocation = WallpaperManagerFlutter.lockScreen;
           break;
         case BOTH_SCREEN:
         default:
-          wallpaperLocation = WallpaperManagerFlutter.bothScreens as String;
+          wallpaperLocation = WallpaperManagerFlutter.bothScreens;
           break;
       }
 
       final result = await wallpaperManager.setWallpaper(
         file,
-        wallpaperLocation as int,
+        wallpaperLocation,
       );
       
       return result;
@@ -50,7 +50,7 @@ class WallpaperService {
     try {
       // Para assets, necesitamos copiar el archivo a un directorio temporal
       final byteData = await rootBundle.load(assetPath);
-      final tempDir = Directory.systemTemp;
+      final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/temp_wallpaper.jpg');
       await tempFile.writeAsBytes(byteData.buffer.asUint8List());
       

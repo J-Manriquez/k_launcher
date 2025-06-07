@@ -3,6 +3,7 @@ import '../models/app_info.dart';
 
 class LauncherService {
   static const MethodChannel _channel = MethodChannel('k_launcher/launcher');
+  static const MethodChannel _permissionsChannel = MethodChannel('k_launcher/permissions');
   
   static Future<void> initialize() async {
     // Inicialización del servicio
@@ -14,43 +15,43 @@ class LauncherService {
       final List<dynamic> apps = await _channel.invokeMethod('getInstalledApps');
       return apps.map((app) => AppInfo.fromNativeMap(Map<String, dynamic>.from(app))).toList();
     } catch (e) {
-      print('Error obteniendo aplicaciones: $e');
+      print('Error obteniendo aplicaciones instaladas: $e');
       return [];
     }
   }
   
-  /// Fuerza la carga de aplicaciones desde el sistema (actualiza caché)
+  /// Carga aplicaciones directamente del sistema
   static Future<List<AppInfo>> loadAppsFromSystem() async {
     try {
       final List<dynamic> apps = await _channel.invokeMethod('loadAppsFromSystem');
       return apps.map((app) => AppInfo.fromNativeMap(Map<String, dynamic>.from(app))).toList();
     } catch (e) {
-      print('Error cargando aplicaciones desde el sistema: $e');
+      print('Error cargando aplicaciones del sistema: $e');
       return [];
     }
   }
   
-  /// Lanza una aplicación por su packageName
+  /// Lanza una aplicación específica
   static Future<void> launchApp(String packageName) async {
     try {
       await _channel.invokeMethod('launchApp', {'packageName': packageName});
     } catch (e) {
-      print('Error lanzando aplicación $packageName: $e');
+      print('Error lanzando aplicación: $e');
       throw e;
     }
   }
   
-  /// Abre la configuración de una aplicación
+  /// Abre la información de una aplicación
   static Future<void> openAppInfo(String packageName) async {
     try {
       await _channel.invokeMethod('openAppInfo', {'packageName': packageName});
     } catch (e) {
-      print('Error abriendo información de $packageName: $e');
+      print('Error abriendo información de la aplicación: $e');
       throw e;
     }
   }
   
-  /// Actualiza el estado habilitado/deshabilitado de una aplicación
+  /// Actualiza el estado de una aplicación
   static Future<void> updateAppState(String packageName, bool isEnabled) async {
     try {
       await _channel.invokeMethod('updateAppState', {
@@ -58,12 +59,12 @@ class LauncherService {
         'isEnabled': isEnabled,
       });
     } catch (e) {
-      print('Error actualizando estado de $packageName: $e');
+      print('Error actualizando estado de la aplicación: $e');
       throw e;
     }
   }
   
-  /// Obtiene la fecha de la última actualización de la lista de apps
+  /// Obtiene la fecha de la última actualización
   static Future<String> getLastUpdateDate() async {
     try {
       return await _channel.invokeMethod('getLastUpdateDate');
@@ -87,9 +88,29 @@ class LauncherService {
   /// Configura la aplicación como launcher por defecto
   static Future<void> setAsDefaultLauncher() async {
     try {
-      await _channel.invokeMethod('setAsDefaultLauncher');
+      await _permissionsChannel.invokeMethod('setAsDefaultLauncher');
     } catch (e) {
       print('Error configurando launcher por defecto: $e');
+      throw e;
+    }
+  }
+  
+  /// Verifica si la aplicación es el launcher por defecto
+  static Future<bool> isDefaultLauncher() async {
+    try {
+      return await _permissionsChannel.invokeMethod('isDefaultLauncher');
+    } catch (e) {
+      print('Error verificando launcher por defecto: $e');
+      return false;
+    }
+  }
+  
+  /// Resetea la configuración de launcher por defecto
+  static Future<void> resetDefaultLauncher() async {
+    try {
+      await _permissionsChannel.invokeMethod('resetDefaultLauncher');
+    } catch (e) {
+      print('Error reseteando launcher por defecto: $e');
       throw e;
     }
   }

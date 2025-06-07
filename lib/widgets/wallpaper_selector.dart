@@ -66,7 +66,7 @@ class _WallpaperSelectorState extends State<WallpaperSelector> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.8,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: Colors.black,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(

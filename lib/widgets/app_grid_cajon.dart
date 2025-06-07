@@ -5,10 +5,10 @@ import '../providers/app_provider.dart';
 import '../providers/settings_provider.dart';
 import 'app_icon.dart';
 
-class AppGrid extends StatelessWidget {
+class AppsGridCajon extends StatelessWidget {
   final List<AppInfo> apps;
   
-  const AppGrid({super.key, required this.apps});
+  const AppsGridCajon({super.key, required this.apps});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +18,7 @@ class AppGrid extends StatelessWidget {
           padding: const EdgeInsets.all(16.0),
           child: GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: settings.gridColumns,
+              crossAxisCount: settings.drawerGridColumns,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,
               childAspectRatio: 0.8,
@@ -80,11 +80,38 @@ class AppGrid extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.add_to_home_screen, color: Colors.white),
-            title: const Text('Añadir a pantalla principal', style: TextStyle(color: Colors.white)),
+            leading: Icon(
+              context.read<AppProvider>().homeScreenApps.any((homeApp) => homeApp.packageName == app.packageName)
+                  ? Icons.remove_from_queue
+                  : Icons.add_to_home_screen,
+              color: Colors.white,
+            ),
+            title: Text(
+              context.read<AppProvider>().homeScreenApps.any((homeApp) => homeApp.packageName == app.packageName)
+                  ? 'Quitar de pantalla principal'
+                  : 'Añadir a pantalla principal',
+              style: const TextStyle(color: Colors.white),
+            ),
             onTap: () {
               Navigator.pop(context);
-              // TODO: Añadir a pantalla principal
+              final appProvider = context.read<AppProvider>();
+              if (appProvider.homeScreenApps.any((homeApp) => homeApp.packageName == app.packageName)) {
+                appProvider.removeFromHomeScreen(app.packageName);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${app.name} removida de la pantalla principal'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } else {
+                appProvider.addToHomeScreen(app);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('${app.name} añadida a la pantalla principal'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
             },
           ),
         ],
