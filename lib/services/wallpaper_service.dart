@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:wallpaper_manager_flutter/wallpaper_manager_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WallpaperService {
   static const int HOME_SCREEN = 1;
   static const int LOCK_SCREEN = 2;
   static const int BOTH_SCREEN = 3;
+  static const String _wallpaperPathKey = 'current_wallpaper_path';
 
   // Método para establecer fondo de pantalla desde archivo
   static Future<bool> setWallpaperFromFile(String filePath, {int location = BOTH_SCREEN}) async {
@@ -18,7 +20,6 @@ class WallpaperService {
 
       final wallpaperManager = WallpaperManagerFlutter();
       
-      // Fix: Use the correct constants directly
       int wallpaperLocation;
       switch (location) {
         case HOME_SCREEN:
@@ -38,6 +39,11 @@ class WallpaperService {
         wallpaperLocation,
       );
       
+      // Guardar la ruta del wallpaper en SharedPreferences
+      if (result) {
+        await _saveWallpaperPath(filePath);
+      }
+      
       return result;
     } catch (e) {
       print('Error al establecer fondo de pantalla: $e');
@@ -48,19 +54,23 @@ class WallpaperService {
   // Método para establecer fondo de pantalla desde asset
   static Future<bool> setWallpaperFromAsset(String assetPath, {int location = BOTH_SCREEN}) async {
     try {
-      // Para assets, necesitamos copiar el archivo a un directorio temporal
+      // Para assets, necesitamos copiar el archivo a un directorio permanente
       final byteData = await rootBundle.load(assetPath);
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/temp_wallpaper.jpg');
-      await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+      final appDir = await getApplicationDocumentsDirectory();
+      final wallpapersDir = Directory('${appDir.path}/wallpapers');
       
-      // Usar el método setWallpaperFromFile con el archivo temporal
-      final result = await setWallpaperFromFile(tempFile.path, location: location);
-      
-      // Limpiar el archivo temporal
-      if (await tempFile.exists()) {
-        await tempFile.delete();
+      // Crear directorio si no existe
+      if (!await wallpapersDir.exists()) {
+        await wallpapersDir.create(recursive: true);
       }
+      
+      // Crear archivo permanente con nombre único basado en el asset
+      final fileName = assetPath.split('/').last;
+      final permanentFile = File('${wallpapersDir.path}/$fileName');
+      await permanentFile.writeAsBytes(byteData.buffer.asUint8List());
+      
+      // Usar el método setWallpaperFromFile con el archivo permanente
+      final result = await setWallpaperFromFile(permanentFile.path, location: location);
       
       return result;
     } catch (e) {
@@ -143,9 +153,23 @@ class WallpaperService {
 
   // Método para obtener la ruta del fondo de pantalla actual
   static Future<String?> getCurrentWallpaperPath() async {
-    // Este plugin no proporciona un método para obtener la ruta actual
-    // Podrías usar SharedPreferences para guardar la última ruta establecida
-    return null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString(_wallpaperPathKey);
+    } catch (e) {
+      print('Error obteniendo ruta del wallpaper: $e');
+      return null;
+    }
+  }
+
+  // Método privado para guardar la ruta del wallpaper
+  static Future<void> _saveWallpaperPath(String path) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_wallpaperPathKey, path);
+    } catch (e) {
+      print('Error guardando ruta del wallpaper: $e');
+    }
   }
 
   // Método para limpiar el fondo de pantalla

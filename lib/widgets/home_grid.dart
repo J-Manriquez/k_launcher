@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/app_info.dart';
 import '../providers/app_provider.dart';
 import '../providers/settings_provider.dart';
 import 'app_icon.dart';
 
-class HomeGrid extends StatelessWidget {
+class HomeGrid extends StatefulWidget {
   final List<AppInfo>? apps;
   final Function(AppInfo)? onAppTap;
   final Function(AppInfo)? onAppLongPress;
@@ -18,6 +19,14 @@ class HomeGrid extends StatelessWidget {
   });
 
   @override
+  State<HomeGrid> createState() => _HomeGridState();
+}
+
+class _HomeGridState extends State<HomeGrid> {
+  bool _isDragging = false;
+  int? _draggedFromPosition;
+  
+  @override
   Widget build(BuildContext context) {
     return Consumer2<AppProvider, SettingsProvider>(
       builder: (context, appProvider, settings, child) {
@@ -25,7 +34,7 @@ class HomeGrid extends StatelessWidget {
         
         // Calculate available screen space
         final availableWidth = screenSize.width;
-        final availableHeight = screenSize.height; // * 0.7 Usar 70% de la pantalla
+        final availableHeight = screenSize.height;
         
         // Use home grid settings
         final columns = settings.homeGridColumns;
@@ -107,19 +116,12 @@ class HomeGrid extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
           onTap: () {
-            if (!isEditMode) {
-              if (onAppTap != null) {
-                onAppTap!(app);
+            if (!isEditMode && !_isDragging) {
+              if (widget.onAppTap != null) {
+                widget.onAppTap!(app);
               } else {
                 appProvider.launchApp(app.packageName);
               }
-            }
-          },
-          onLongPress: () {
-            if (onAppLongPress != null) {
-              onAppLongPress!(app);
-            } else {
-              _showAppOptions(context, app, appProvider);
             }
           },
           child: Padding(
@@ -173,62 +175,114 @@ class HomeGrid extends StatelessWidget {
       ),
     );
     
-    if (isEditMode) {
-      return Draggable<AppInfo>(
-        data: app,
-        feedback: Material(
-          color: Colors.transparent,
+    // Envolver en GestureDetector para manejar long press y drag
+    return GestureDetector(
+      onLongPressStart: (details) {
+        if (!isEditMode) {
+          // Activar modo edición y iniciar drag
+          settings.setHomeGridEditMode(true);
+          HapticFeedback.mediumImpact();
+        }
+      },
+      child: isEditMode ? _buildDraggableApp(
+        appWidget,
+        app,
+        position,
+        moduleSize,
+        appProvider,
+      ) : appWidget,
+    );
+  }
+  
+  Widget _buildDraggableApp(
+    Widget appWidget,
+    AppInfo app,
+    int position,
+    double moduleSize,
+    AppProvider appProvider,
+  ) {
+    return LongPressDraggable<AppInfo>(
+      data: app,
+      delay: const Duration(milliseconds: 100),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(
+          scale: 1.2,
           child: Container(
             width: moduleSize,
             height: moduleSize,
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.7),
+              color: Colors.blue.withOpacity(0.8),
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: appWidget,
           ),
         ),
-        childWhenDragging: Container(
-          width: moduleSize,
-          height: moduleSize,
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.3),
-              width: 2,
-              style: BorderStyle.solid,
-            ),
+      ),
+      childWhenDragging: Container(
+        width: moduleSize,
+        height: moduleSize,
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.5),
+            width: 2,
+            // style: BorderStyle.dashed,
           ),
         ),
-        child: DragTarget<AppInfo>(
-          onAccept: (draggedApp) {
-            final draggedPosition = appProvider.getPositionOfApp(draggedApp.packageName);
-            if (draggedPosition != null) {
-              appProvider.moveAppInHomeGrid(draggedPosition, position);
-            }
-          },
-          builder: (context, candidateData, rejectedData) {
-            return appWidget;
-          },
+        child: Icon(
+          Icons.apps,
+          color: Colors.white.withOpacity(0.5),
+          size: moduleSize * 0.3,
         ),
-        onDragStarted: () {
-          // Opcional: feedback háptico
+      ),
+      onDragStarted: () {
+        setState(() {
+          _isDragging = true;
+          _draggedFromPosition = position;
+        });
+        HapticFeedback.lightImpact();
+      },
+      onDragEnd: (details) {
+        setState(() {
+          _isDragging = false;
+          _draggedFromPosition = null;
+        });
+      },
+      child: DragTarget<AppInfo>(
+        onWillAccept: (data) => data != null && data.packageName != app.packageName,
+        onAccept: (draggedApp) {
+          final draggedPosition = appProvider.getPositionOfApp(draggedApp.packageName);
+          if (draggedPosition != null && draggedPosition != position) {
+            // Intercambiar posiciones
+            _swapApps(appProvider, draggedPosition, position);
+            HapticFeedback.mediumImpact();
+          }
         },
-        onDragEnd: (details) {
-          // El drop se maneja en DragTarget
+        builder: (context, candidateData, rejectedData) {
+          final isHovering = candidateData.isNotEmpty;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: isHovering ? Border.all(
+                color: Colors.blue,
+                width: 2,
+              ) : null,
+            ),
+            child: appWidget,
+          );
         },
-      );
-    }
-    
-    return appWidget;
+      ),
+    );
   }
   
   Widget _buildEmptySlot(
@@ -239,6 +293,7 @@ class HomeGrid extends StatelessWidget {
     AppProvider appProvider,
   ) {
     return DragTarget<AppInfo>(
+      onWillAccept: (data) => data != null,
       onAccept: (app) {
         final currentPosition = appProvider.getPositionOfApp(app.packageName);
         if (currentPosition != null) {
@@ -246,11 +301,13 @@ class HomeGrid extends StatelessWidget {
         } else {
           appProvider.addToHomeGridPosition(app, position);
         }
+        HapticFeedback.mediumImpact();
       },
       builder: (context, candidateData, rejectedData) {
         final isHovering = candidateData.isNotEmpty;
         
-        return Container(
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           width: moduleSize,
           height: moduleSize,
           decoration: BoxDecoration(
@@ -262,21 +319,35 @@ class HomeGrid extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: isEditMode ? Border.all(
               color: isHovering 
-                  ? Colors.blue.withOpacity(0.5)
-                  : Colors.white.withOpacity(0.05),
+                  ? Colors.blue
+                  : Colors.white.withOpacity(0.1),
               width: isHovering ? 2 : 1,
             ) : null,
           ),
           child: isEditMode ? Icon(
-            Icons.add,
+            isHovering ? Icons.add_circle : Icons.add,
             color: isHovering 
-                ? Colors.blue.withOpacity(0.7)
-                : Colors.white.withOpacity(0.2),
+                ? Colors.blue
+                : Colors.white.withOpacity(0.3),
             size: moduleSize * 0.3,
           ) : null,
         );
       },
     );
+  }
+  
+  void _swapApps(AppProvider appProvider, int fromPosition, int toPosition) {
+    final fromApp = appProvider.getAppAtPosition(fromPosition);
+    final toApp = appProvider.getAppAtPosition(toPosition);
+    
+    if (fromApp != null) {
+      appProvider.removeFromHomeGridPosition(fromPosition);
+      if (toApp != null) {
+        appProvider.removeFromHomeGridPosition(toPosition);
+        appProvider.addToHomeGridPosition(toApp, fromPosition);
+      }
+      appProvider.addToHomeGridPosition(fromApp, toPosition);
+    }
   }
 
   void _showAppOptions(BuildContext context, AppInfo app, AppProvider appProvider) {

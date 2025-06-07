@@ -184,12 +184,9 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setInt('home_grid_rows', value);
   }
   
-  Future<void> setHomeGridEditMode(bool value) async {
-    _homeGridEditMode = value;
+  void setHomeGridEditMode(bool editMode) {
+    _homeGridEditMode = editMode;
     notifyListeners();
-    
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('home_grid_edit_mode', value);
   }
   
   Future<void> setEnableAnimations(bool value) async {
