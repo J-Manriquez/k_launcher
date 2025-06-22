@@ -120,8 +120,10 @@ class _AppDrawerState extends State<AppDrawer> with TickerProviderStateMixin {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Consumer2<AppProvider, SettingsProvider>(
-          builder: (context, appProvider, settings, child) {
-            final appsPerPage = settings.drawerGridColumns * settings.drawerGridRows;
+          builder: (context, appProvider, settingsProvider, child) {
+    // Establecer la referencia
+    appProvider.setSettingsProvider(settingsProvider);
+            final appsPerPage = settingsProvider.drawerGridColumns * settingsProvider.drawerGridRows;
             final totalPages = (appProvider.filteredApps.length / appsPerPage).ceil();
 
             return Column(
@@ -238,7 +240,7 @@ class _AppDrawerState extends State<AppDrawer> with TickerProviderStateMixin {
                         child: GridView.builder(
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: settings.drawerGridColumns,
+                            crossAxisCount: settingsProvider.drawerGridColumns,
                             crossAxisSpacing: 16,
                             mainAxisSpacing: 16,
                             childAspectRatio: 0.8,

@@ -29,7 +29,9 @@ class _HomeGridState extends State<HomeGrid> {
   @override
   Widget build(BuildContext context) {
     return Consumer2<AppProvider, SettingsProvider>(
-      builder: (context, appProvider, settings, child) {
+      builder: (context, appProvider, settingsProvider, child) {
+    // Establecer la referencia
+    appProvider.setSettingsProvider(settingsProvider);
         final screenSize = MediaQuery.of(context).size;
 
         // Calculate available screen space
@@ -37,9 +39,9 @@ class _HomeGridState extends State<HomeGrid> {
         final availableHeight = screenSize.height;
 
         // Use home grid settings
-        final columns = settings.homeGridColumns;
-        final rows = settings.homeGridRows;
-        final isEditMode = settings.homeGridEditMode;
+        final columns = settingsProvider.homeGridColumns;
+        final rows = settingsProvider.homeGridRows;
+        final isEditMode = settingsProvider.homeGridEditMode;
 
         // Calculate module size to fit screen (minimum 10x10px, always square)
         final moduleWidth = availableWidth / columns;
@@ -57,64 +59,136 @@ class _HomeGridState extends State<HomeGrid> {
           color: isEditMode
               ? Colors.black.withOpacity(0.1)
               : Colors.transparent,
-          child: GridView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: columns,
-              crossAxisSpacing: 0,
-              mainAxisSpacing: 0,
-              childAspectRatio: 1.0,
-            ),
-            itemCount: columns * rows,
-            itemBuilder: (context, index) {
-              final item = appProvider.getItemAtPosition(index);
-
-              if (item != null) {
-                if (item is AppInfo) {
-                  return _buildAppSlot(
-                    context,
-                    item,
-                    index,
-                    finalModuleSize,
-                    isEditMode,
-                    appProvider,
-                    settings,
-                  );
-                } else if (item is FolderInfo) {
-                  return _buildFolderSlot(
-                    context,
-                    item,
-                    index,
-                    finalModuleSize,
-                    isEditMode,
-                    appProvider,
-                    settings,
-                  );
-                }else if (item is WidgetInfo) {
-      return _buildWidgetSlot(
-        context,
-        item,
-        index,
-        finalModuleSize,
-        isEditMode,
-        appProvider,
-        settings,
-      );
-    }
-              }
-
-              return _buildEmptySlot(
-                context,
-                index,
+          child: Stack(
+            children: [
+              // Grid background for edit mode
+              if (isEditMode)
+                _buildGridBackground(columns, rows, finalModuleSize),
+              // Render all items
+              ..._buildAllGridItems(
+                appProvider,
+                settingsProvider,
                 finalModuleSize,
                 isEditMode,
-                appProvider,
-              );
-            },
+              ),
+            ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildGridBackground(int columns, int rows, double moduleSize) {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: 0,
+        mainAxisSpacing: 0,
+        childAspectRatio: 1.0,
+      ),
+      itemCount: columns * rows,
+      itemBuilder: (context, index) {
+        return _buildEmptySlot(
+          context,
+          index,
+          moduleSize,
+          true,
+          Provider.of<AppProvider>(context, listen: false),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildAllGridItems(
+    AppProvider appProvider,
+    SettingsProvider settings,
+    double moduleSize,
+    bool isEditMode,
+  ) {
+    final List<Widget> items = [];
+    final Set<int> processedPositions = {};
+    final columns = settings.homeGridColumns;
+
+    for (final entry in appProvider.homeGridItems.entries) {
+      final position = entry.key;
+      final item = entry.value;
+
+      // Skip if this position was already processed (for multi-cell widgets)
+      if (processedPositions.contains(position)) continue;
+
+      final row = position ~/ columns;
+      final col = position % columns;
+      final left = col * moduleSize;
+      final top = row * moduleSize;
+
+      if (item is AppInfo) {
+        items.add(
+          Positioned(
+            left: left,
+            top: top,
+            child: _buildAppSlot(
+              context,
+              item,
+              position,
+              moduleSize,
+              isEditMode,
+              appProvider,
+              settings,
+            ),
+          ),
+        );
+        processedPositions.add(position);
+      } else if (item is FolderInfo) {
+        items.add(
+          Positioned(
+            left: left,
+            top: top,
+            child: _buildFolderSlot(
+              context,
+              item,
+              position,
+              moduleSize,
+              isEditMode,
+              appProvider,
+              settings,
+            ),
+          ),
+        );
+        processedPositions.add(position);
+      } else if (item is WidgetInfo) {
+        // Only render widget at its start position
+        final startPosition = appProvider.getWidgetStartPosition(item.id);
+        if (startPosition == position) {
+          items.add(
+            Positioned(
+              left: left,
+              top: top,
+              child: _buildWidgetSlot(
+                context,
+                item,
+                position,
+                moduleSize,
+                isEditMode,
+                appProvider,
+                settings,
+              ),
+            ),
+          );
+
+          // Mark all positions occupied by this widget as processed
+          final startRow = startPosition! ~/ columns;
+          final startCol = startPosition % columns;
+          for (int r = startRow; r < startRow + item.height; r++) {
+            for (int c = startCol; c < startCol + item.width; c++) {
+              processedPositions.add(r * columns + c);
+            }
+          }
+        }
+      }
+    }
+
+    return items;
   }
 
   Widget _buildAppSlot(
@@ -344,144 +418,110 @@ class _HomeGridState extends State<HomeGrid> {
     );
   }
 
-  
-Widget _buildDraggableWidget(
-  Widget widgetWidget,
-  WidgetInfo widget,
-  int position,
-  double moduleSize,
-  AppProvider appProvider,
-) {
-  return LongPressDraggable<WidgetInfo>(
-    data: widget,
-    delay: const Duration(milliseconds: 100),
-    feedback: Material(
-      color: Colors.transparent,
-      child: Transform.scale(
-        scale: 1.1,
-        child: Container(
-          width: moduleSize * widget.width,
-          height: moduleSize * widget.height,
-          decoration: BoxDecoration(
-            color: Colors.purple.withOpacity(0.8),
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.5),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
+  Widget _buildDraggableWidget(
+    Widget child,
+    WidgetInfo widget,
+    int position,
+    double moduleSize,
+    AppProvider appProvider,
+  ) {
+    return LongPressDraggable<WidgetInfo>(
+      data: widget,
+      delay: const Duration(milliseconds: 100),
+      feedback: Material(
+        color: Colors.transparent,
+        child: Transform.scale(
+          scale: 1.1,
+          child: Container(
+            width: moduleSize * widget.width,
+            height: moduleSize * widget.height,
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white, width: 2),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.widgets,
+                color: Colors.white,
+                size: moduleSize * 0.4,
               ),
-            ],
+            ),
           ),
-          child: widgetWidget,
         ),
       ),
-    ),
-    childWhenDragging: Container(
-      width: moduleSize * widget.width,
-      height: moduleSize * widget.height,
-      decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.5),
-          width: 2,
+      childWhenDragging: Container(
+        width: moduleSize * widget.width,
+        height: moduleSize * widget.height,
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey, width: 1),
         ),
       ),
-      child: Icon(
-        Icons.widgets,
-        color: Colors.white.withOpacity(0.5),
-        size: moduleSize * 0.3,
-      ),
-    ),
-    onDragStarted: () {
-      setState(() {
-        _isDragging = true;
-        _draggedFromPosition = position;
-      });
-      HapticFeedback.lightImpact();
-    },
-    onDragEnd: (details) {
-      setState(() {
-        _isDragging = false;
-        _draggedFromPosition = null;
-        _showDeleteMenu(context, position, widget, appProvider, _itemKeys[position]);
-      });
-    },
-    child: DragTarget<Object>(
-      onWillAccept: (data) {
-        if (data is WidgetInfo) {
-          return data.id != widget.id;
-        }
-        return data is AppInfo || data is FolderInfo;
+      onDragStarted: () {
+        setState(() {
+          _isDragging = true;
+        });
+        HapticFeedback.mediumImpact();
       },
-      onAccept: (data) {
-        if (data is WidgetInfo) {
-          final draggedPosition = appProvider.homeGridItems.entries
-              .where((entry) => entry.value is WidgetInfo && (entry.value as WidgetInfo).id == data.id)
-              .firstOrNull?.key;
-              
-          if (draggedPosition != null && draggedPosition != position) {
-            _swapItems(appProvider, draggedPosition, position);
-            HapticFeedback.mediumImpact();
-          }
-        }
-        // Manejar otros tipos de elementos...
+      onDragEnd: (details) {
+        setState(() {
+          _isDragging = false;
+        });
       },
-      builder: (context, candidateData, rejectedData) {
-        final isHovering = candidateData.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: isHovering ? Border.all(
-              color: Colors.purple,
-              width: 2,
-            ) : null,
-          ),
-          child: widgetWidget,
-        );
-      },
-    ),
-  );
-}
+      child: child,
+    );
+  }
 
   // Agregar el método _buildWidgetSlot:
-Widget _buildWidgetSlot(
-  BuildContext context,
-  WidgetInfo widget,
-  int position,
-  double moduleSize,
-  bool isEditMode,
-  AppProvider appProvider,
-  SettingsProvider settings,
-) {
-  _itemKeys[position] ??= GlobalKey();
-  
-  return Container(
-    key: _itemKeys[position],
-    child: isEditMode
-        ? _buildDraggableWidget(
-            SystemWidget(
-              widget: widget,
-              moduleSize: moduleSize,
-              onTap: () {}, // Los widgets no se "abren" como las apps
-            ),
-            widget,
-            position,
-            moduleSize,
-            appProvider,
-          )
-        : SystemWidget(
-            widget: widget,
-            moduleSize: moduleSize,
-            onLongPress: () {
-              settings.setHomeGridEditMode(true);
-              HapticFeedback.mediumImpact();
-            },
-          ),
-  );
-}
+  Widget _buildWidgetSlot(
+    BuildContext context,
+    WidgetInfo widget,
+    int position,
+    double moduleSize,
+    bool isEditMode,
+    AppProvider appProvider,
+    SettingsProvider settings,
+  ) {
+    _itemKeys[position] ??= GlobalKey();
+
+    // Calculate total widget size
+    final totalWidth = moduleSize * widget.width;
+    final totalHeight = moduleSize * widget.height;
+
+    Widget widgetChild = SystemWidget(
+      widget: widget,
+      moduleSize: moduleSize,
+      onTap: () => _showWidgetResizeDialog(context, widget, appProvider),
+    );
+
+    if (isEditMode) {
+      widgetChild = _buildDraggableWidget(
+        widgetChild,
+        widget,
+        position,
+        moduleSize,
+        appProvider,
+      );
+    } else {
+      widgetChild = GestureDetector(
+        onLongPress: () {
+          settings.setHomeGridEditMode(true);
+          HapticFeedback.mediumImpact();
+        },
+        onTap: () => _showWidgetResizeDialog(context, widget, appProvider),
+        child: widgetChild,
+      );
+    }
+
+    return Container(
+      key: _itemKeys[position],
+      width: totalWidth,
+      height: totalHeight,
+      child: widgetChild,
+    );
+  }
 
   Widget _buildEmptySlot(
     BuildContext context,
@@ -508,6 +548,19 @@ Widget _buildWidgetSlot(
                 (entry) =>
                     entry.value is FolderInfo &&
                     (entry.value as FolderInfo).id == data.id,
+              )
+              .firstOrNull
+              ?.key;
+
+          if (currentPosition != null) {
+            appProvider.moveItemInHomeGrid(currentPosition, position);
+          }
+        } else if (data is WidgetInfo) {
+          final currentPosition = appProvider.homeGridItems.entries
+              .where(
+                (entry) =>
+                    entry.value is WidgetInfo &&
+                    (entry.value as WidgetInfo).id == data.id,
               )
               .firstOrNull
               ?.key;
@@ -1200,6 +1253,126 @@ void _showResizeDialog(
         ],
       ),
     ),
+  );
+}
+
+// Agregar función para redimensionar widgets
+void _showWidgetResizeDialog(
+  BuildContext context,
+  WidgetInfo widget,
+  AppProvider appProvider,
+) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: Colors.grey[900],
+      title: const Text(
+        'Configurar Widget',
+        style: TextStyle(color: Colors.white),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Widget: ${widget.name}',
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  appProvider.removeWidget(widget.id);
+                  Navigator.pop(context);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Eliminar'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+void _showResizeOptions(
+  BuildContext context,
+  WidgetInfo widget,
+  AppProvider appProvider,
+) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text(
+          'Cambiar tamaño del widget',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Tamaño actual: ${widget.width}x${widget.height}',
+              style: TextStyle(color: Colors.grey),
+            ),
+            SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildSizeOption('1x1', 1, 1, widget, appProvider, context),
+                _buildSizeOption('2x1', 2, 1, widget, appProvider, context),
+                _buildSizeOption('2x2', 2, 2, widget, appProvider, context),
+                _buildSizeOption('3x2', 3, 2, widget, appProvider, context),
+                _buildSizeOption('4x2', 4, 2, widget, appProvider, context),
+                _buildSizeOption('4x3', 4, 3, widget, appProvider, context),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Widget _buildSizeOption(
+  String label,
+  int width,
+  int height,
+  WidgetInfo widget,
+  AppProvider appProvider,
+  BuildContext context,
+) {
+  final isCurrentSize = widget.width == width && widget.height == height;
+
+  return ElevatedButton(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: isCurrentSize ? Colors.blue : Colors.grey[700],
+      foregroundColor: Colors.white,
+    ),
+    onPressed: isCurrentSize
+        ? null
+        : () {
+            final newWidget = WidgetInfo(
+              id: widget.id,
+              name: widget.name,
+              packageName: widget.packageName,
+              className: widget.className,
+              width: width,
+              height: height,
+              nativeWidgetId: widget.nativeWidgetId,
+            );
+            appProvider.updateWidget(newWidget);
+            Navigator.of(context).pop();
+          },
+    child: Text(label),
   );
 }
 

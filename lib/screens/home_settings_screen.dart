@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:k_launcher/widgets/wallpaper_selector.dart';
+import 'package:k_launcher/widgets/widget_selector_sheet.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/app_provider.dart';
@@ -189,8 +190,6 @@ class HomeSettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
-              const SizedBox(height: 16),
 
               // Configuración de Carpetas
               const SizedBox(height: 16),
@@ -318,7 +317,37 @@ class HomeSettingsScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // Configuración de Carpetas
+              const SizedBox(height: 16),
+              Card(
+                color: Colors.grey[900],
+                child: Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text(
+                        'Configuración de widgets',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    ListTile(
+                      title: const Text('Añadir widget', style: TextStyle(color: Colors.white)),
+                      subtitle: const Text('Añadir un widget a la pantalla principal', style: TextStyle(color: Colors.grey)),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.add_circle, color: Colors.blue),
+                        onPressed: () => _showWidgetSelector(context, appProvider),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
+            
           );
         },
       ),
@@ -414,6 +443,15 @@ class HomeSettingsScreen extends StatelessWidget {
           )).toList(),
         ),
       ),
+    );
+  }
+  
+  void _showWidgetSelector(BuildContext context, AppProvider appProvider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black,
+      builder: (context) => WidgetSelectorSheet(appProvider: appProvider),
     );
   }
 }

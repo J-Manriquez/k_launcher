@@ -24,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late PageController _homePageController;
   bool _isDrawerOpen = false;
   int _currentHomePage = 0;
-  
+
   @override
   void initState() {
     super.initState();
@@ -33,14 +33,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _drawerAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _drawerAnimationController,
-      curve: Curves.easeInOut,
-    ));
-    
+    _drawerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _drawerAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
     // Cargar aplicaciones al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AppProvider>().loadInstalledApps();
@@ -73,7 +72,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Consumer2<AppProvider, SettingsProvider>(
-        builder: (context, appProvider, settings, child) {
+        builder: (context, appProvider, settingsProvider, child) {
+          // Establecer la referencia
+          appProvider.setSettingsProvider(settingsProvider);
           return Stack(
             children: [
               // Fondo de pantalla
@@ -94,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       : null,
                 ),
               ),
-              
+
               // Contenido principal
               GestureDetector(
                 onVerticalDragUpdate: (details) {
@@ -103,19 +104,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   }
                 },
                 child: Column(
-                  children: [                    
+                  children: [
                     // Grid principal - usar solo HomeGrid
                     Expanded(
                       child: HomeGrid(
-                        onAppTap: (app) => appProvider.launchApp(app.packageName),
-                        onAppLongPress: (app) => _showHomeAppOptions(context, app),
+                        onAppTap: (app) =>
+                            appProvider.launchApp(app.packageName),
+                        onAppLongPress: (app) =>
+                            _showHomeAppOptions(context, app),
                       ),
                     ),
-                      
                   ],
                 ),
               ),
-              
+
               // App Drawer
               if (_isDrawerOpen)
                 AnimatedBuilder(
@@ -136,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-  
+
   // void _showWallpaperSelector() {
   //   showModalBottomSheet(
   //     context: context,
@@ -152,9 +154,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   //     MaterialPageRoute(builder: (context) => const SettingsScreen()),
   //   );
   // }
-  
+
   void _showHomeAppOptions(BuildContext context, AppInfo app) {
     // TODO: Implement home screen app options (move, remove, create folder)
   }
-  
 }

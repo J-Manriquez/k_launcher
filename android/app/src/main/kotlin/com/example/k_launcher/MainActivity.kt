@@ -1,6 +1,7 @@
 package com.example.k_launcher
 
 import android.app.AppOpsManager
+import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -18,13 +19,18 @@ import com.example.k_launcher.AppListService
 class MainActivity : FlutterActivity() {
     private val PERMISSIONS_CHANNEL = "k_launcher/permissions"
     private val LAUNCHER_CHANNEL = "k_launcher/launcher"
+    private val WIDGET_CHANNEL = "k_launcher/widgets" // Nuevo canal
     private val OVERLAY_PERMISSION_REQUEST = 1001
     private val USAGE_STATS_REQUEST = 1002
     private val WRITE_SETTINGS_REQUEST = 1003
     private val STORAGE_MANAGEMENT_REQUEST = 1004
     private val NOTIFICATION_REQUEST = 1005
+    private val WIDGET_BIND_REQUEST = 1006
+    private var pendingWidgetId: Int? = null
+    private var pendingWidgetProvider: String? = null
     
     private lateinit var appListService: AppListService
+    private lateinit var widgetService: WidgetService // Nuevo servicio
     
     companion object {
         var instance: MainActivity? = null
@@ -35,6 +41,13 @@ class MainActivity : FlutterActivity() {
         
         instance = this
         appListService = AppListService(this)
+        widgetService = WidgetService(this)
+        
+        // Registrar la vista de plataforma para widgets
+        flutterEngine
+            .platformViewsController
+            .registry
+            .registerViewFactory("system_widget_view", SystemWidgetViewFactory())
         
         // Canal para permisos
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PERMISSIONS_CHANNEL).setMethodCallHandler { call, result ->
@@ -138,6 +151,66 @@ class MainActivity : FlutterActivity() {
                 }
                 "getEnabledPackages" -> {
                     result.success(appListService.getEnabledPackages().toList())
+                }
+                else -> {
+                    result.notImplemented()
+                }
+            }
+        }
+        
+        // Nuevo canal para widgets
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getAppsWithWidgets" -> {
+                    try {
+                        val apps = widgetService.getAppsWithWidgets()
+                        result.success(apps)
+                    } catch (e: Exception) {
+                        result.error("ERROR", "Error getting apps with widgets: ${e.message}", null)
+                    }
+                }
+                "createWidget" -> {
+                    val providerName = call.argument<String>("providerName")
+                    val width = call.argument<Int>("width")
+                    val height = call.argument<Int>("height")
+                    if (providerName != null && width != null && height != null) {
+                        try {
+                            val widget = widgetService.createWidget(providerName, width, height)
+                            result.success(widget)
+                        } catch (e: Exception) {
+                            result.error("ERROR", "Error creating widget: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Provider name, width and height are required", null)
+                    }
+                }
+                "updateWidget" -> {
+                    val widgetId = call.argument<Int>("widgetId")
+                    val width = call.argument<Int>("width")
+                    val height = call.argument<Int>("height")
+                    if (widgetId != null && width != null && height != null) {
+                        try {
+                            val image = widgetService.updateWidget(widgetId, width, height)
+                            result.success(image)
+                        } catch (e: Exception) {
+                            result.error("ERROR", "Error updating widget: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Widget ID, width and height are required", null)
+                    }
+                }
+                "deleteWidget" -> {
+                    val widgetId = call.argument<Int>("widgetId")
+                    if (widgetId != null) {
+                        try {
+                            val success = widgetService.deleteWidget(widgetId)
+                            result.success(success)
+                        } catch (e: Exception) {
+                            result.error("ERROR", "Error deleting widget: ${e.message}", null)
+                        }
+                    } else {
+                        result.error("INVALID_ARGUMENT", "Widget ID is required", null)
+                    }
                 }
                 else -> {
                     result.notImplemented()
@@ -318,5 +391,58 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         super.onDestroy()
         instance = null
+    }
+
+    fun requestWidgetBindPermission(intent: Intent, widgetId: Int) {
+        pendingWidgetId = widgetId
+        pendingWidgetProvider = intent.getParcelableExtra<ComponentName>(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER)?.flattenToString()
+        startActivityForResult(intent, WIDGET_BIND_REQUEST)
+    }
+    
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        
+        when (requestCode) {
+            OVERLAY_PERMISSION_REQUEST -> {
+                // Handle overlay permission result
+            }
+            USAGE_STATS_REQUEST -> {
+                // Handle usage stats permission result
+            }
+            WRITE_SETTINGS_REQUEST -> {
+                // Handle write settings permission result
+            }
+            STORAGE_MANAGEMENT_REQUEST -> {
+                // Handle storage management permission result
+            }
+            NOTIFICATION_REQUEST -> {
+                // Handle notification permission result
+            }
+            WIDGET_BIND_REQUEST -> {
+                if (resultCode == RESULT_OK && pendingWidgetId != null && pendingWidgetProvider != null) {
+                    // Widget permission granted, notify Flutter
+                    val result = mapOf(
+                        "success" to true,
+                        "widgetId" to pendingWidgetId!!
+                    )
+                    // You can send this result back to Flutter via MethodChannel if needed
+                }
+                // Clear pending data
+                pendingWidgetId = null
+                pendingWidgetProvider = null
+            }
+        }
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Iniciar el host de widgets
+        widgetService.startListening()
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Detener el host de widgets
+        widgetService.stopListening()
     }
 }

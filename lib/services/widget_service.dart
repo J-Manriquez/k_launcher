@@ -1,66 +1,120 @@
 import 'package:flutter/services.dart';
-import '../models/widget_info.dart';
 
 class WidgetService {
   static const MethodChannel _channel = MethodChannel('k_launcher/widgets');
-  
-  /// Obtiene la lista de widgets disponibles en el sistema
-  static Future<List<WidgetInfo>> getAvailableWidgets() async {
+
+  // Obtener todas las aplicaciones que tienen widgets
+  static Future<List<Map<String, dynamic>>> getAppsWithWidgets() async {
     try {
-      final List<dynamic> result = await _channel.invokeMethod('getAvailableWidgets');
-      return result.map((widget) => WidgetInfo(
-        id: widget['id'],
-        name: widget['name'],
-        packageName: widget['packageName'],
-        className: widget['className'],
-        width: 2, // Tamaño por defecto
-        height: 2,
-      )).toList();
+      final result = await _channel.invokeMethod('getAppsWithWidgets');
+      if (result == null) return [];
+
+      // Convertir explícitamente el resultado a la estructura esperada
+      final List<dynamic> resultList = List<dynamic>.from(result);
+      return resultList.map((item) {
+        if (item is Map) {
+          return Map<String, dynamic>.from(
+            item.map((key, value) {
+              if (key == 'widgets' && value is List) {
+                return MapEntry(
+                  key.toString(),
+                  List<Map<String, dynamic>>.from(
+                    value.map((widget) => Map<String, dynamic>.from(widget)),
+                  ),
+                );
+              }
+              // Validar y limpiar datos Base64
+              if (key == 'icon' && value is String) {
+                final cleanIcon = value.trim().replaceAll(RegExp(r'\s+'), '');
+                return MapEntry(key.toString(), cleanIcon);
+              }
+              return MapEntry(key.toString(), value);
+            }),
+          );
+        }
+        return <String, dynamic>{};
+      }).toList();
     } catch (e) {
-      print('Error obteniendo widgets: $e');
+      print('Error getting apps with widgets: $e');
       return [];
     }
   }
-  
-  /// Crea una instancia de un widget
-  static Future<bool> createWidget(WidgetInfo widget) async {
+
+  // Crear un nuevo widget
+  static Future<Map<String, dynamic>?> createWidget(
+    String providerName,
+    int width,
+    int height,
+  ) async {
     try {
-      final bool result = await _channel.invokeMethod('createWidget', {
-        'id': widget.id,
-        'packageName': widget.packageName,
-        'className': widget.className,
-        'configuration': widget.configuration,
+      final result = await _channel.invokeMethod('createWidget', {
+        'providerName': providerName,
+        'width': width,
+        'height': height,
       });
-      return result;
+      
+      if (result != null) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
     } catch (e) {
-      print('Error creando widget: $e');
-      return false;
+      print('Error creating widget: $e');
+      return null;
     }
   }
-  
-  /// Actualiza la configuración de un widget
-  static Future<bool> updateWidget(WidgetInfo widget) async {
+
+  // Configurar listener para permisos de widgets
+  static void setPermissionCallbacks({
+    Function(int widgetId, String provider)? onPermissionGranted,
+    Function(int widgetId)? onPermissionDenied,
+  }) {
+    _channel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'onWidgetPermissionGranted':
+          if (onPermissionGranted != null) {
+            final widgetId = call.arguments['widgetId'] as int;
+            final provider = call.arguments['provider'] as String;
+            onPermissionGranted(widgetId, provider);
+          }
+          break;
+        case 'onWidgetPermissionDenied':
+          if (onPermissionDenied != null) {
+            final widgetId = call.arguments['widgetId'] as int;
+            onPermissionDenied(widgetId);
+          }
+          break;
+      }
+    });
+  }
+
+  // Actualizar un widget existente
+  static Future<String?> updateWidget(
+    int widgetId,
+    int width,
+    int height,
+  ) async {
     try {
-      final bool result = await _channel.invokeMethod('updateWidget', {
-        'id': widget.id,
-        'configuration': widget.configuration,
+      final result = await _channel.invokeMethod('updateWidget', {
+        'widgetId': widgetId,
+        'width': width,
+        'height': height,
       });
-      return result;
+      return result as String?;
     } catch (e) {
-      print('Error actualizando widget: $e');
-      return false;
+      print('Error updating widget: $e');
+      return null;
     }
   }
-  
-  /// Elimina un widget
-  static Future<bool> deleteWidget(String widgetId) async {
+
+  // Eliminar un widget
+  static Future<bool> deleteWidget(int widgetId) async {
     try {
-      final bool result = await _channel.invokeMethod('deleteWidget', {
-        'id': widgetId,
+      final result = await _channel.invokeMethod('deleteWidget', {
+        'widgetId': widgetId,
       });
-      return result;
+      return result as bool;
     } catch (e) {
-      print('Error eliminando widget: $e');
+      print('Error deleting widget: $e');
       return false;
     }
   }

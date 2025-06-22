@@ -1,0 +1,189 @@
+
+W/MIUIScout App( 9762):     at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+W/MIUIScout App( 9762):     at android.os.Handler.handleCallback(Handler.java:958)       
+W/MIUIScout App( 9762):     at android.os.Handler.dispatchMessage(Handler.java:99)       
+W/MIUIScout App( 9762):     at android.os.Looper.loopOnce(Looper.java:224)
+W/MIUIScout App( 9762):     at android.os.Looper.loop(Looper.java:318)
+W/MIUIScout App( 9762):     at android.app.ActivityThread.main(ActivityThread.java:8790) 
+W/MIUIScout App( 9762):     at java.lang.reflect.Method.invoke(Native Method)
+W/MIUIScout App( 9762):     at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:561)
+W/MIUIScout App( 9762):     at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1013)
+I/mple.k_launcher( 9762): Thread[2,tid=9785,WaitingInMainSignalCatcherLoop,Thread*=0xb40000728a002000,peer=0x14d4d6a0,"Signal Catcher"]: reacting to signal 3
+I/mple.k_launcher( 9762):
+I/mple.k_launcher( 9762): Wrote stack traces to tombstoned
+E/BitmapFactory( 9762): Unable to decode stream: java.io.FileNotFoundException: /product/media/theme/miui_mod_icons/dynamic/com.xiaomi.smarthome/2.png: open failed: ENOENT (No such file or directory)
+W/Looper  ( 9762): PerfMonitor longMsg : seq=107 plan=20:28:56.504 late=20ms wall=6397ms h=android.os.Handler c=io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0 procState=-1
+E/SystemWidgetView( 9762): Widget ID is null
+E/flutter ( 9762): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: PlatformException(error, java.lang.IllegalStateException: PlatformView#getView() returned null, but an Android view reference was expected.
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController.createPlatformView(PlatformViewsController.java:527)
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController$1.createForTextureLayer(PlatformViewsController.java:196)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.create(PlatformViewsChannel.java:128)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.onMethodCall(PlatformViewsChannel.java:55)
+E/flutter ( 9762):      at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:267)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)  
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+E/flutter ( 9762):      at android.os.Handler.handleCallback(Handler.java:958)
+E/flutter ( 9762):      at android.os.Handler.dispatchMessage(Handler.java:99)
+E/flutter ( 9762):      at android.os.Looper.loopOnce(Looper.java:224)
+E/flutter ( 9762):      at android.os.Looper.loop(Looper.java:318)
+E/flutter ( 9762):      at android.app.ActivityThread.main(ActivityThread.java:8790)     
+E/flutter ( 9762):      at java.lang.reflect.Method.invoke(Native Method)
+E/flutter ( 9762):      at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:561)
+E/flutter ( 9762):      at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1013) 
+E/flutter ( 9762): , null, null)
+E/flutter ( 9762): #0      StandardMethodCodec.decodeEnvelope (package:flutter/src/services/message_codecs.dart:652:7)
+E/flutter ( 9762): #1      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:370:18)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #2      TextureAndroidViewController._sendCreateMessage (package:flutter/src/services/platform_views.dart:1241:9)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #3      AndroidViewController.create (package:flutter/src/services/platform_views.dart:836:5)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #4      AndroidViewController.setSize (package:flutter/src/services/platform_views.dart:863:7)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #5      RenderAndroidView._sizePlatformView (package:flutter/src/rendering/platform_view.dart:178:29)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762):
+W/WindowOnBackDispatcher( 9762): sendCancelIfRunning: isInProgress=falsecallback=io.flutter.embedding.android.FlutterActivity$1@8ec2031
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/PlatformViewsController( 9762): Sending touch to an unknown view with id: 8
+E/SystemWidgetView( 9762): Widget ID is null
+E/flutter ( 9762): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: PlatformException(error, java.lang.IllegalStateException: PlatformView#getView() returned null, but an Android view reference was expected.
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController.createPlatformView(PlatformViewsController.java:527)
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController$1.createForTextureLayer(PlatformViewsController.java:196)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.create(PlatformViewsChannel.java:128)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.onMethodCall(PlatformViewsChannel.java:55)
+E/flutter ( 9762):      at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:267)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)  
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+E/flutter ( 9762):      at android.os.Handler.handleCallback(Handler.java:958)
+E/flutter ( 9762):      at android.os.Handler.dispatchMessage(Handler.java:99)
+E/flutter ( 9762):      at android.os.Looper.loopOnce(Looper.java:224)
+E/flutter ( 9762):      at android.os.Looper.loop(Looper.java:318)
+E/flutter ( 9762):      at android.app.ActivityThread.main(ActivityThread.java:8790)
+E/flutter ( 9762):      at java.lang.reflect.Method.invoke(Native Method)
+E/flutter ( 9762):      at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:561)
+E/flutter ( 9762):      at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1013) 
+E/flutter ( 9762): , null, null)
+E/flutter ( 9762): #0      StandardMethodCodec.decodeEnvelope (package:flutter/src/services/message_codecs.dart:652:7)
+E/flutter ( 9762): #1      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:370:18)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #2      TextureAndroidViewController._sendCreateMessage (package:flutter/src/services/platform_views.dart:1241:9)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #3      AndroidViewController.create (package:flutter/src/services/platform_views.dart:836:5)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #4      AndroidViewController.setSize (package:flutter/src/services/platform_views.dart:863:7)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #5      RenderAndroidView._sizePlatformView (package:flutter/src/rendering/platform_view.dart:178:29)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): 
+E/PlatformViewsController( 9762): Disposing unknown platform view with id: 8
+E/SystemWidgetView( 9762): Widget ID is null
+E/flutter ( 9762): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: PlatformException(error, java.lang.IllegalStateException: PlatformView#getView() returned null, but an Android view reference was expected.
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController.createPlatformView(PlatformViewsController.java:527)
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController$1.createForTextureLayer(PlatformViewsController.java:196)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.create(PlatformViewsChannel.java:128)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.onMethodCall(PlatformViewsChannel.java:55)
+E/flutter ( 9762):      at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:267)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)  
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+E/flutter ( 9762):      at android.os.Handler.handleCallback(Handler.java:958)
+E/flutter ( 9762):      at android.os.Handler.dispatchMessage(Handler.java:99)
+E/flutter ( 9762):      at android.os.Looper.loopOnce(Looper.java:224)
+E/flutter ( 9762):      at android.os.Looper.loop(Looper.java:318)
+E/flutter ( 9762):      at android.app.ActivityThread.main(ActivityThread.java:8790)     
+E/flutter ( 9762):      at java.lang.reflect.Method.invoke(Native Method)
+E/flutter ( 9762):      at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:561)
+E/flutter ( 9762):      at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1013) 
+E/flutter ( 9762): , null, null)
+E/flutter ( 9762): #0      StandardMethodCodec.decodeEnvelope (package:flutter/src/services/message_codecs.dart:652:7)
+E/flutter ( 9762): #1      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:370:18)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #2      TextureAndroidViewController._sendCreateMessage (package:flutter/src/services/platform_views.dart:1241:9)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #3      AndroidViewController.create (package:flutter/src/services/platform_views.dart:836:5)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #4      AndroidViewController.setSize (package:flutter/src/services/platform_views.dart:863:7)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #5      RenderAndroidView._sizePlatformView (package:flutter/src/rendering/platform_view.dart:178:29)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762):
+E/PlatformViewsController( 9762): Disposing unknown platform view with id: 9
+I/MiInputConsumer( 9762): optimized resample latency: 137829714 ns
+W/WindowOnBackDispatcher( 9762): sendCancelIfRunning: isInProgress=falsecallback=io.flutter.embedding.android.FlutterActivity$1@8ec2031
+W/BpBinder( 9762): PerfMonitor binderTransact: time=519ms interface=com.android.internal.widget.IRemoteViewsFactory code=1
+E/SystemWidgetView( 9762): Widget ID is null
+E/flutter ( 9762): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: PlatformException(error, java.lang.IllegalStateException: PlatformView#getView() returned null, but an Android view reference was expected.
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController.createPlatformView(PlatformViewsController.java:527)
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController$1.createForTextureLayer(PlatformViewsController.java:196)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.create(PlatformViewsChannel.java:128)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.onMethodCall(PlatformViewsChannel.java:55)
+E/flutter ( 9762):      at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:267)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)  
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+E/flutter ( 9762):      at android.os.Handler.handleCallback(Handler.java:958)
+E/flutter ( 9762):      at android.os.Handler.dispatchMessage(Handler.java:99)
+E/flutter ( 9762):      at android.os.Looper.loopOnce(Looper.java:224)
+E/flutter ( 9762):      at android.os.Looper.loop(Looper.java:318)
+E/flutter ( 9762):      at android.app.ActivityThread.main(ActivityThread.java:8790)     
+E/flutter ( 9762):      at java.lang.reflect.Method.invoke(Native Method)
+E/flutter ( 9762):      at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:561)
+E/flutter ( 9762):      at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1013) 
+E/flutter ( 9762): , null, null)
+E/flutter ( 9762): #0      StandardMethodCodec.decodeEnvelope (package:flutter/src/services/message_codecs.dart:652:7)
+E/flutter ( 9762): #1      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:370:18)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #2      TextureAndroidViewController._sendCreateMessage (package:flutter/src/services/platform_views.dart:1241:9)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #3      AndroidViewController.create (package:flutter/src/services/platform_views.dart:836:5)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #4      AndroidViewController.setSize (package:flutter/src/services/platform_views.dart:863:7)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #5      RenderAndroidView._sizePlatformView (package:flutter/src/rendering/platform_view.dart:178:29)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762):
+E/PlatformViewsController( 9762): Disposing unknown platform view with id: 10
+W/BpBinder( 9762): PerfMonitor binderTransact: time=514ms interface=com.android.internal.widget.IRemoteViewsFactory code=1
+W/BpBinder( 9762): PerfMonitor binderTransact: time=516ms interface=com.android.internal.widget.IRemoteViewsFactory code=1
+E/SystemWidgetView( 9762): Widget ID is null
+E/flutter ( 9762): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: PlatformException(error, java.lang.IllegalStateException: PlatformView#getView() returned null, but an Android view reference was expected.
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController.createPlatformView(PlatformViewsController.java:527)
+E/flutter ( 9762):      at io.flutter.plugin.platform.PlatformViewsController$1.createForTextureLayer(PlatformViewsController.java:196)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.create(PlatformViewsChannel.java:128)
+E/flutter ( 9762):      at io.flutter.embedding.engine.systemchannels.PlatformViewsChannel$1.onMethodCall(PlatformViewsChannel.java:55)
+E/flutter ( 9762):      at io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:267)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)  
+E/flutter ( 9762):      at io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+E/flutter ( 9762):      at android.os.Handler.handleCallback(Handler.java:958)
+E/flutter ( 9762):      at android.os.Handler.dispatchMessage(Handler.java:99)
+E/flutter ( 9762):      at android.os.Looper.loopOnce(Looper.java:224)
+E/flutter ( 9762):      at android.os.Looper.loop(Looper.java:318)
+E/flutter ( 9762):      at android.app.ActivityThread.main(ActivityThread.java:8790)
+E/flutter ( 9762):      at java.lang.reflect.Method.invoke(Native Method)
+E/flutter ( 9762):      at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:561)
+E/flutter ( 9762):      at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1013) 
+E/flutter ( 9762): , null, null)
+E/flutter ( 9762): #0      StandardMethodCodec.decodeEnvelope (package:flutter/src/services/message_codecs.dart:652:7)
+E/flutter ( 9762): #1      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:370:18)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #2      TextureAndroidViewController._sendCreateMessage (package:flutter/src/services/platform_views.dart:1241:9)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #3      AndroidViewController.create (package:flutter/src/services/platform_views.dart:836:5)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #4      AndroidViewController.setSize (package:flutter/src/services/platform_views.dart:863:7)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): #5      RenderAndroidView._sizePlatformView (package:flutter/src/rendering/platform_view.dart:178:29)
+E/flutter ( 9762): <asynchronous suspension>
+E/flutter ( 9762): 
+E/PlatformViewsController( 9762): Disposing unknown platform view with id: 11
+W/WindowOnBackDispatcher( 9762): sendCancelIfRunning: isInProgress=falsecallback=io.flutter.embedding.android.FlutterActivity$1@8ec2031

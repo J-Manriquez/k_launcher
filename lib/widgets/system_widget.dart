@@ -21,12 +21,46 @@ class SystemWidget extends StatefulWidget {
 }
 
 class _SystemWidgetState extends State<SystemWidget> {
-  static const MethodChannel _channel = MethodChannel('k_launcher/widget_view');
+  static final Map<int, bool> _createdViews = {};
+  
+  @override
+  void dispose() {
+    // Limpiar el registro cuando el widget se destruye
+    if (widget.widget.nativeWidgetId != null) {
+      _createdViews.remove(widget.widget.nativeWidgetId!);
+    }
+    super.dispose();
+  }
   
   @override
   Widget build(BuildContext context) {
     final width = widget.moduleSize * widget.widget.width;
     final height = widget.moduleSize * widget.widget.height;
+    
+    // Verificar que tenemos un nativeWidgetId válido
+    if (widget.widget.nativeWidgetId == null) {
+      return Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Colors.red.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        child: const Center(
+          child: Text(
+            'Widget Error',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
+    
+    // Usar una key estable basada en el nativeWidgetId
+    final widgetId = widget.widget.nativeWidgetId!;
+    final viewKey = ValueKey('widget_view_$widgetId');
     
     return GestureDetector(
       onTap: widget.onTap,
@@ -44,13 +78,17 @@ class _SystemWidgetState extends State<SystemWidget> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: AndroidView(
+            key: viewKey,
             viewType: 'system_widget_view',
             creationParams: {
-              'widgetId': widget.widget.id,
+              'widgetId': widgetId,
               'width': width.toInt(),
               'height': height.toInt(),
             },
             creationParamsCodec: const StandardMessageCodec(),
+            onPlatformViewCreated: (int id) {
+              print('Platform view created with ID: $id, Widget ID: $widgetId');
+            },
           ),
         ),
       ),
