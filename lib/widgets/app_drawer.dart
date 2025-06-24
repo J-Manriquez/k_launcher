@@ -107,11 +107,28 @@ class _AppDrawerState extends State<AppDrawer> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onVerticalDragStart: (details) {
+        // Registrar posición inicial
+      },
       onVerticalDragUpdate: (details) {
-        if (details.delta.dy > 5) {
+        // Mejorar la detección del gesto hacia abajo
+        if (details.delta.dy > 3) {
+          // Solo cerrar si el gesto es consistente hacia abajo
+          final velocity = details.primaryDelta ?? 0;
+          if (velocity > 5) {
+            widget.onClose();
+          }
+        }
+      },
+      onVerticalDragEnd: (details) {
+        // Detectar velocidad del gesto para cerrar más rápido
+        if (details.primaryVelocity != null && 
+            details.primaryVelocity! > 500) {
           widget.onClose();
         }
       },
+      // Prevenir conflictos con scroll interno
+      behavior: HitTestBehavior.translucent,
       child: Container(
         height: MediaQuery.of(context).size.height,
         width: MediaQuery.of(context).size.width,

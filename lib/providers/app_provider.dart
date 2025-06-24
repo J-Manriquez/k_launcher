@@ -48,10 +48,11 @@ class AppProvider extends ChangeNotifier {
   void setSettingsProvider(SettingsProvider settingsProvider) {
     _settingsProvider = settingsProvider;
   }
-  
+
   // Implementar el método _getGridColumns
   int _getGridColumns() {
-    return _settingsProvider?.homeGridColumns ?? 3; // Valor por defecto de 3 columnas
+    return _settingsProvider?.homeGridColumns ??
+        3; // Valor por defecto de 3 columnas
   }
 
   Future<void> loadInstalledApps() async {
@@ -648,6 +649,33 @@ class AppProvider extends ChangeNotifier {
     for (final position in positionsToRemove) {
       homeGridItems.remove(position);
     }
+  }
+
+  void addFolder(FolderInfo folder) {
+    if (!_folders.any((f) => f.id == folder.id)) {
+      _folders.add(folder);
+      _saveFolders();
+      notifyListeners();
+    }
+  }
+
+  void swapItemsInHomeGrid(int fromPosition, int toPosition) {
+    final fromItem = _homeGridItems[fromPosition];
+    final toItem = _homeGridItems[toPosition];
+
+    if (fromItem != null && toItem != null) {
+      _homeGridItems[fromPosition] = toItem;
+      _homeGridItems[toPosition] = fromItem;
+    } else if (fromItem != null) {
+      _homeGridItems[toPosition] = fromItem;
+      _homeGridItems.remove(fromPosition);
+    } else if (toItem != null) {
+      _homeGridItems[fromPosition] = toItem;
+      _homeGridItems.remove(toPosition);
+    }
+
+    _saveHomeGridItems();
+    notifyListeners();
   }
 
   bool _canPlaceWidget(int startPosition, int width, int height) {

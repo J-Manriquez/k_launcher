@@ -28,13 +28,14 @@ class FolderWidget extends StatelessWidget {
           onLongPress: onLongPress,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min, // Añadir esta línea
             children: [
-              Expanded(
+              Flexible( // Cambiar de Expanded a Flexible
                 flex: 3,
                 child: Container(
                   width: size + size*0.25,
-                  // height: size - size*0.5,
-                  margin: EdgeInsets.only(bottom: size*0.4, top: 1), // Añade un margen de 8.0 en todas las direcciones,
+                  height: size * 0.8, // Añadir altura específica
+                  margin: EdgeInsets.only(bottom: size*0.4, top: 1),
                   decoration: BoxDecoration(
                     color: folder.backgroundColor,
                     borderRadius: BorderRadius.circular(12),
@@ -50,18 +51,21 @@ class FolderWidget extends StatelessWidget {
                 ),
               ),
               if (settings.showFolderNames)
-                Expanded(
+                Flexible( // Cambiar de Expanded a Flexible
                   flex: 1,
-                  child: Text(
-                    folder.name,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: settings.folderNameTextSize,
-                      fontWeight: FontWeight.w500,
+                  child: Container(
+                    height: size * 0.3, // Añadir altura específica
+                    child: Text(
+                      folder.name,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: settings.folderNameTextSize,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
             ],
